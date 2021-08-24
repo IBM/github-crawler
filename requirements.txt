@@ -1,0 +1,8 @@
+python-dotenv
+github3.py
+Markdown
+moment
+ibm-watson
+joblib
+pandas
+cloudant

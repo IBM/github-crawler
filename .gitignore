@@ -1,0 +1,15 @@
+env
+.env
+redhat
+__pycache__
+redhat-repos*
+*.pyc
+*.csv
+*.bck
+*.tmp
+ghe_repos_*
+*.repos
+*data/
+*jsonl
+*xls
+.DS_Store
