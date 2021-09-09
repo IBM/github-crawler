@@ -727,3 +727,73 @@ def get_starred_events(repo_name, cut_date="2000"):
     except Exception as e:
         print(repo_name, "error \n", str(e))
         raise e
+
+def get_commit_history(repo_name):
+    print(repo_name, " get commit history ")
+    repo_name_parts = repo_name.split("/")
+    print(repo_name_parts)
+    try:
+        commits = []
+        PAGE_SIZE = 100
+        cursor = None
+        hasNextPage = True
+        page = 1
+        while hasNextPage:
+            print("PAGE: ", page)
+            body = """
+            { 
+                repository(name: "%s", owner: "%s") {
+                    defaultBranchRef {
+                        target {
+                            ... on Commit {
+                                  history(first: %d %s) {
+                                        pageInfo {
+                                              hasNextPage
+                                              endCursor
+                                        }
+                                        edges {
+                                              cursor
+                                              node {
+                                                    committedDate
+                                                    message
+                                                    committer {
+                                                          email
+                                                    }             
+                                              }
+                                        }
+                                  }
+                            }
+                        }
+                    }
+                }
+            }
+            """ % (repo_name_parts[1], repo_name_parts[0], PAGE_SIZE, ", after: \"{}\"".format(cursor) if cursor else "")
+            res = requests.request("POST",
+                                   API_URL + "/graphql",
+                                   json={'query': body},
+                                   headers = {
+                                        "Content-Type": "application/json",
+                                        "Authorization": "Bearer {}".format(get_token("graphql"))
+                                    }).json()
+            if "errors" in res:
+                print(json.dumps(res["errors"], indent=2))
+            try:
+                for r in res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["edges"]:
+                    if r:
+                        committedDate = format_date_utc_iso(r["node"]["committedDate"])
+                        committedMsg = r["node"]["message"]
+                        committerEmail = r["node"]["committer"]["email"]
+                        commits.append({"date": committedDate, "message": committedMsg, "email": committerEmail})
+                cursor = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"]["endCursor"]
+                hasNextPage = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"]["hasNextPage"]
+            except Exception as e:
+                print(str(e))
+                hasNextPage = False
+                pass
+            page = page + 1
+        print("commits", len(commits))
+        return commits
+
+    except Exception as e:
+        print(repo_name, "error \n", str(e))
+        raise e
