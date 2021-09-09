@@ -670,7 +670,7 @@ def update_starred_events(repo_name):
     stargazer_event_array = get_starred_events(repo_name)
     save_doc(repo_name, {"starred_events": stargazer_event_array})
 
-def get_starred_events(repo_name):
+def get_starred_events(repo_name, cut_date="2000"):
     print(repo_name, " get stargazers' starred time ")
     repo_name_parts = repo_name.split("/")
     try:
@@ -711,7 +711,7 @@ def get_starred_events(repo_name):
                     res_items += 1
                     if r:
                         starredAt = format_date_utc_iso(r["starredAt"])
-                        if len(stargazers) > 10 and starredAt < "2019-01-01":
+                        if starredAt < cut_date:
                             break
                         stargazers[r["node"]["login"]] = starredAt
                         cursor = r["cursor"]

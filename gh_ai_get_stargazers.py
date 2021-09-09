@@ -23,22 +23,25 @@ def main(args):
     except:
         sort = "desc"
 
-    repos = [ r["_id"] for r in db.get_query_result({
+    repos = [ r for r in db.get_query_result({
                 "type":"Repo",
-                # "topics": { "$elemMatch": { "$in": ["machine-learning", "deep-learning" ] } },
-                "starred_events": {"$or": [ { "$exists": False }, { "$eq": None } ]},
-                # "stars": { "$gt": 5 }
-            },["_id"], limit=limit, skip=skip, raw_result=True, sort=[{'stars': sort}] )["docs"] ]
+                "stargazers_events": { "$exists": False }
+            },["_id", "stars"], limit=limit, skip=skip, raw_result=True, sort=[{'stars': sort}] )["docs"] ]
 
     print("repos", len(repos))
 
-    for repo_id in repos:
-        print("\n", repo_id)
+    for repo in repos:
+        print("\n", repo)
+        repo_id = repo["_id"]
         try:
-            starred_events = gh.get_starred_events(repo_id)
-            if starred_events is not None:
-                # print(len(starred_events))
-                save_doc(repo_id, {"starred_events": starred_events, "stargazers_id": None })
+            starred_events = gh.get_starred_events(repo_id, "2019-01-01")
+            starred_events = [] if starred_events is None else starred_events
+            save_doc(repo_id+"/stargazers", {"type": "RepoStargazers", "repo_id": repo_id, "events": starred_events })
+            save_doc(repo_id, {
+                "starred_events": None,
+                "stargazers_events_id": repo_id+"/stargazers",
+                "stargazers_events": len(starred_events),
+                "stars": gh.get_repo_by_fullname(repo_id).stargazers_count })
         except Exception as e:
             print(str(e))
             pass
