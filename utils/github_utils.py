@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com")
-try: 
+try:
     n = int(os.getenv("TOKENS"))
 except:
     n = None
@@ -90,7 +90,7 @@ def get_user(user_obj, overwrite=False, details=True, ignore_updated=True):
     today = moment.utcnow().zero
     if login in db and overwrite is False: # and moment.date(cloudant_db[login]["updated_at"]) >= moment.date(user_obj.updated_at):
         print(login, "already in db")
-        # try: 
+        # try:
         #     if user_obj.type == "User":
         #         for o in get_client().user(login).organizations():
         #             get_user(o, overwrite)
@@ -122,7 +122,7 @@ def get_user(user_obj, overwrite=False, details=True, ignore_updated=True):
                 print(login, "get organizations")
                 for o in get_client().user(login).organizations():
                     result["orgs"].append(o.login)
-                    # get_user(o, overwrite) 
+                    # get_user(o, overwrite)
                 print(login, "get commits")
                 commits = search_commits(login, from_date=2020)
                 result["commits_2020"] = commits
@@ -254,7 +254,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
             }
             print("REPO NOT FOUND", repo)
             return save_doc(repo, metadata)
-    
+
     if repo.full_name in db and overwrite is False:
         print(20*"*", repo.full_name, "already in db")
         print(15*"-", "get owner")
@@ -279,7 +279,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
             repo = repo.refresh()
         except github3.exceptions.ForbiddenError:
             repo = get_repo_by_fullname(repo.full_name)
-            
+
     firstSunday = moment.now().replace(weekday=7).subtract(weeks=53).zero
     print(repo.full_name, "get metadata")
     metadata = {
@@ -317,7 +317,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
         # "events": [ c.as_dict() for c in repo.events() ],
         # deployments
         # contents = dict(repo.directory_contents('path/to/dir/'))
-        # forks        
+        # forks
         # milestones
         # pages
         # projects
@@ -349,11 +349,11 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
                 downloads[r.tag_name] = 0
             for a in r.assets():
                 downloads[r.tag_name] += a.download_count
-        metadata["releases"] = [ 
-            {   "tag": r.tag_name, 
+        metadata["releases"] = [
+            {   "tag": r.tag_name,
                 "published_at": format_date_utc_iso(r.published_at),
                 "download": downloads[r.tag_name]
-            } 
+            }
             for r in releases if r.name is not None or r.name != "" ]
         # downloads = [ a.download_count for r in releases for a in r.assets() ]
         metadata["download_count"] = sum(downloads.values())
@@ -404,14 +404,14 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
     except Exception as e:
         print(repo.full_name, "error getting languages!!!\n", str(e))
         pass
-    
+
     # topics
     try:
         metadata["topics"] = repo.topics().names
     except Exception as e:
         print(repo.full_name, "error getting topics!!!\n", str(e))
         pass
-    
+
     # weekly_commit_count
     try:
         metadata["commits_weekly"] = [ { "week": firstSunday.add(weeks=1).strftime(ISO_SHORT_FORMAT), "value": c } for c in repo.weekly_commit_count()["all"] ]
@@ -423,7 +423,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
         print(repo.full_name, "merge commits")
         first_index =  [i for i,x in enumerate(current_commits) if x["week"] == metadata["commits_weekly"][0]["week"]][0]
         metadata["commits_weekly"] = current_commits[0:first_index] + metadata["commits_weekly"]
-    
+
     # contributors
     try:
         print(repo.full_name, "get contributors")
@@ -458,7 +458,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
     except Exception as e:
         print(repo.full_name, "error parsing stargazers!!!\n", str(e))
         pass
-    
+
     # assignees
     # try:
     #     print(repo.full_name, "get assignees")
@@ -498,7 +498,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
         for i in pull_requests:
             continue
         metadata["pull_requests_count"] = pull_requests.total_count
-        # pull_requests = repo.pull_requests(state='all')   
+        # pull_requests = repo.pull_requests(state='all')
         # metadata["pull_requests_count"] = len(list(pull_requests))
     except Exception as e:
         print(repo.full_name, "error parsing pull_requests!!!\n", str(e))
@@ -583,7 +583,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
             metadata["contributing_md"] = requests.request("GET", u).text
 
     my_repo_doc = save_doc(repo.full_name, metadata)
-        
+
     print(15*"-", "get owner")
     get_user(repo.owner, overwrite, details=user_details)
     if get_users:
@@ -622,7 +622,7 @@ def get_user_commits(user_login, orgs):
 def search_commits(committer, org=None, from_date=2020):
     commits = []
     last_updated_at = moment.now().add(week=1).zero.strftime(ISO_SHORT_FORMAT)
-    total = 0    
+    total = 0
     PAGE_SIZE = 100
     res_items = PAGE_SIZE
     while res_items == PAGE_SIZE:
@@ -634,7 +634,7 @@ def search_commits(committer, org=None, from_date=2020):
         for com in commits_search_result:
             c = com.as_dict()
             res_items += 1
-            commit = { 
+            commit = {
                 "repo": c["repository"]["full_name"],
                 "date": format_date_utc_iso(c["commit"]["committer"]["date"]),
             }
@@ -662,7 +662,7 @@ def get_user_search_issues(user_login, verb, type="issue", gh_client=None):
 
 def get_user_issues_involved(user_login, gh_client=None):
     return get_user_search_issues(user_login, "involves", "issue", gh_client)
-            
+
 def get_user_pull_requests_involved(user_login, gh_client=None):
     return get_user_search_issues(user_login, "involves", "pr", gh_client)
 
@@ -676,9 +676,9 @@ def get_starred_events(repo_name, cut_date="2000"):
     try:
         stargazers = {}
         PAGE_SIZE = 100
-        res_items = PAGE_SIZE
+        hasNextPage = True
         cursor = None
-        while res_items == PAGE_SIZE:
+        while hasNextPage:
             print(len(stargazers.keys()), cursor)
             body = """
                 {
@@ -686,10 +686,13 @@ def get_starred_events(repo_name, cut_date="2000"):
                         stargazers(orderBy: %s, first: %d %s) {
                             edges {
                                 starredAt
-                                cursor
                                 node {
                                     login
                                 }
+                            }
+                            pageInfo {
+                                endCursor
+                                hasNextPage
                             }
                         }
                     }
@@ -705,16 +708,16 @@ def get_starred_events(repo_name, cut_date="2000"):
 
             if "errors" in res:
                 print(json.dumps(res["errors"],indent=2))
-            res_items = 0
             try:
                 for r in res["data"]["repository"]["stargazers"]["edges"]:
-                    res_items += 1
                     if r:
                         starredAt = format_date_utc_iso(r["starredAt"])
                         if starredAt < cut_date:
                             break
                         stargazers[r["node"]["login"]] = starredAt
-                        cursor = r["cursor"]
+                page = res["data"]["repository"]["stargazers"]["pageInfo"]
+                cursor = page["endCursor"]
+                hasNextPage = page["hasNextPage"]
             except Exception as e:
                 print(str(e))
                 pass
@@ -724,5 +727,3 @@ def get_starred_events(repo_name, cut_date="2000"):
     except Exception as e:
         print(repo_name, "error \n", str(e))
         raise e
-
-
