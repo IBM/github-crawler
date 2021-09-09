@@ -720,7 +720,7 @@ def get_starred_events(repo_name, cut_date="2000"):
                 hasNextPage = page["hasNextPage"]
             except Exception as e:
                 print(str(e))
-                pass
+                raise e
         print("stargazers", len(stargazers))
         return stargazers
 
