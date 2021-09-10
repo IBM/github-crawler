@@ -13,6 +13,7 @@ from .cloudant_utils import cloudant_db as db, save_doc
 from . import ISO_FORMAT, format_date_utc_iso, ISO_SHORT_FORMAT, now_short
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com")
@@ -21,6 +22,8 @@ try:
 except:
     n = None
 gh_tokens = os.getenv("GITHUB_TOKENS").split(",")[0:n]
+
+
 # print(API_URL, gh_tokens)
 
 def login(token):
@@ -28,6 +31,7 @@ def login(token):
         return github3.enterprise_login(url=API_URL, username=token.split(":")[0], password=token.split(":")[1])
     else:
         return github3.login(token=token)
+
 
 gh_clients = []
 for t in gh_tokens:
@@ -40,14 +44,16 @@ for t in gh_tokens:
         gh_tokens.pop(gh_tokens.index(t))
         print(t, str(e))
 
+
 def get_max_index_limit(resource="core"):
-    limit = { "core": 200, "search": 5, "graphql": 100 }
+    limit = {"core": 200, "search": 5, "graphql": 100}
     try:
         # print([ gh.rate_limit() for gh in gh_clients ])
-        gh_limits = [ gh.rate_limit()['resources'][resource]["remaining"] for gh in gh_clients ]
+        gh_limits = [gh.rate_limit()['resources'][resource]["remaining"] for gh in gh_clients]
         max_value = max(gh_limits)
         if max_value < limit[resource]:
-            seconds = (moment.unix(gh_clients[gh_limits.index(max_value)].rate_limit()['resources'][resource]["reset"]) - moment.now()).total_seconds()
+            seconds = (moment.unix(gh_clients[gh_limits.index(max_value)].rate_limit()['resources'][resource][
+                                       "reset"]) - moment.now()).total_seconds()
             print("Sleeping " + str(seconds) + "s")
             time.sleep(seconds)
         max_index = gh_limits.index(max_value)
@@ -58,8 +64,10 @@ def get_max_index_limit(resource="core"):
         print("Exception", str(e))
         return randrange(len(gh_clients))
 
+
 def get_token(resource="core"):
     return gh_tokens[get_max_index_limit(resource)]
+
 
 def get_rand_client():
     i = randrange(len(gh_clients))
@@ -75,11 +83,13 @@ def get_rand_client():
         print(i, gh_tokens[i].split(":")[0], "ForbiddenError")
         return get_rand_client()
 
+
 def get_client(resource="core"):
     if "ibm" in API_URL:
         return get_rand_client()
     else:
         return gh_clients[get_max_index_limit(resource)]
+
 
 def get_user(user_obj, overwrite=False, details=True, ignore_updated=True):
     try:
@@ -88,7 +98,7 @@ def get_user(user_obj, overwrite=False, details=True, ignore_updated=True):
         login = user_obj
 
     today = moment.utcnow().zero
-    if login in db and overwrite is False: # and moment.date(cloudant_db[login]["updated_at"]) >= moment.date(user_obj.updated_at):
+    if login in db and overwrite is False:  # and moment.date(cloudant_db[login]["updated_at"]) >= moment.date(user_obj.updated_at):
         print(login, "already in db")
         # try:
         #     if user_obj.type == "User":
@@ -98,7 +108,7 @@ def get_user(user_obj, overwrite=False, details=True, ignore_updated=True):
         #     pass
         return db[login]
     elif login in db and ignore_updated and moment.date(db[login].get("crawled_updated_at", "2000")).zero == today:
-        print(20*"*", login, "already updated today")
+        print(20 * "*", login, "already updated today")
         return db[login]
     else:
         if type(user_obj) != github3.users.User:
@@ -108,11 +118,14 @@ def get_user(user_obj, overwrite=False, details=True, ignore_updated=True):
                 print(login, type(user_obj), str(e))
                 user_obj = get_client().user(login)
         full_user = user_obj.as_dict()
-        result = {k: full_user.get(k, None) for k in ('login', 'id', 'type', 'blog', 'company', 'name', 'location', 'bio', 'email',"twitter_username","public_repos","public_gists","followers","following","created_at","updated_at", "suspended_at")}
+        result = {k: full_user.get(k, None) for k in (
+        'login', 'id', 'type', 'blog', 'company', 'name', 'location', 'bio', 'email', "twitter_username",
+        "public_repos", "public_gists", "followers", "following", "created_at", "updated_at", "suspended_at")}
         result["_id"] = result["login"]
         result["created_at"] = format_date_utc_iso(result["created_at"])
         result["updated_at"] = format_date_utc_iso(result["updated_at"])
-        result["suspended_at"] = format_date_utc_iso(result["suspended_at"]) if "suspended_at" in result and result["suspended_at"] is not None else None
+        result["suspended_at"] = format_date_utc_iso(result["suspended_at"]) if "suspended_at" in result and result[
+            "suspended_at"] is not None else None
         del result["login"]
 
         if details is True:
@@ -142,8 +155,8 @@ def get_user(user_obj, overwrite=False, details=True, ignore_updated=True):
                     print(type(e), str(e))
                     result["commits_count_all"] = 0
 
-                for issue_pr in [ "issue", "pr"]:
-                    for verb in [ "involves" ]: #, "author", "assignee", "mentions", "commenter"]:
+                for issue_pr in ["issue", "pr"]:
+                    for verb in ["involves"]:  # , "author", "assignee", "mentions", "commenter"]:
                         result["{}s_{}".format(issue_pr, verb)] = get_user_search_issues(login, verb, issue_pr)
 
             print(login, "get repos")
@@ -151,9 +164,10 @@ def get_user(user_obj, overwrite=False, details=True, ignore_updated=True):
 
         return save_doc(login, result)
 
+
 def get_repos(user_login, type="org"):
-    print(user_login, type, 40*"*")
-    if type=="org":
+    print(user_login, type, 40 * "*")
+    if type == "org":
         if user_login in db and "repos" in db[user_login]:
             return db[user_login]["repos"]
         else:
@@ -162,8 +176,9 @@ def get_repos(user_login, type="org"):
     else:
         return [r.full_name for r in get_client().repositories_by(user_login)]
 
+
 def get_user_repos(user_login, type):
-    print(15*"-", "get repos", user_login, type)
+    print(15 * "-", "get repos", user_login, type)
     repos = get_repos(user_login, "user")
     if type == "User":
         for r in get_client().user(user_login).organizations():
@@ -171,8 +186,9 @@ def get_user_repos(user_login, type):
     # repos.sort()
     return repos
 
+
 def save_readme_file(file_path, repo):
-    print(15*"-", "get readme")
+    print(15 * "-", "get readme")
     readme_html = ""
     try:
         readme = repo.readme()
@@ -199,18 +215,21 @@ def save_readme_file(file_path, repo):
         outfile.write("\n</body>\n")
         outfile.write("</html>\n")
 
+
 def file_name(repo_name, ext="json"):
-    return repo_name.replace("/","_").replace(".","_")+"."+ext
+    return repo_name.replace("/", "_").replace(".", "_") + "." + ext
+
 
 def get_community_profile(full_name):
     print(full_name, "get community profile")
     try:
         return requests.request("GET",
-                API_URL+"/repos/"+full_name+"/community/profile",
-                headers={ "Accept": "application/vnd.github.black-panther-preview+json"},
-                auth=('', get_token())).json()
+                                API_URL + "/repos/" + full_name + "/community/profile",
+                                headers={"Accept": "application/vnd.github.black-panther-preview+json"},
+                                auth=('', get_token())).json()
     except:
         return {}
+
 
 def get_commits(full_name):
     print(full_name, "get commits total")
@@ -221,16 +240,18 @@ def get_commits(full_name):
         user = p[0]
         token = p[1]
 
-    url = ("https://api.github.ibm.com" if "ibm" in API_URL else API_URL)+"/search/commits"
-    querystring = {"q":"repo:{} committer-date:>2000".format(full_name),"per_page":"1"}
+    url = ("https://api.github.ibm.com" if "ibm" in API_URL else API_URL) + "/search/commits"
+    querystring = {"q": "repo:{} committer-date:>2000".format(full_name), "per_page": "1"}
     payload = ""
     headers = {
         "Accept": "application/vnd.github.cloak-preview"
     }
-    return requests.request("GET", url, data=payload, headers=headers, params=querystring, auth=(user, token)).json()["total_count"]
+    return requests.request("GET", url, data=payload, headers=headers, params=querystring, auth=(user, token)).json()[
+        "total_count"]
 
-def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, user_details=False, contributors_only=False):
 
+def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, user_details=False,
+                     contributors_only=False):
     # repo_name = repo if type(repo) is str else repo.full_name
     # if repo_name in db and "crawled_updated_at" in db[repo_name] and db[repo_name]["crawled_updated_at"] > now_short():
     #     print(repo_name, "already updated today")
@@ -256,24 +277,24 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
             return save_doc(repo, metadata)
 
     if repo.full_name in db and overwrite is False:
-        print(20*"*", repo.full_name, "already in db")
-        print(15*"-", "get owner")
+        print(20 * "*", repo.full_name, "already in db")
+        print(15 * "-", "get owner")
         get_user(repo.owner, overwrite, details=user_details)
         if get_users:
-            print(15*"-", "get contributors")
+            print(15 * "-", "get contributors")
             for c in repo.contributors():
                 get_user(c, overwrite, details=user_details)
             if not contributors_only:
-                print(15*"-", "get subscribers")
+                print(15 * "-", "get subscribers")
                 for s in repo.subscribers():
                     get_user(s, overwrite, details=user_details)
-                print(15*"-", "get stargazers")
+                print(15 * "-", "get stargazers")
                 for s in repo.stargazers():
                     get_user(s, overwrite, details=user_details)
         return db[repo.full_name]
 
     # extract metadata
-    if isinstance(repo,  github3.repos.repo.ShortRepository):
+    if isinstance(repo, github3.repos.repo.ShortRepository):
         print(repo.full_name, "refresh repo")
         try:
             repo = repo.refresh()
@@ -350,11 +371,11 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
             for a in r.assets():
                 downloads[r.tag_name] += a.download_count
         metadata["releases"] = [
-            {   "tag": r.tag_name,
-                "published_at": format_date_utc_iso(r.published_at),
-                "download": downloads[r.tag_name]
-            }
-            for r in releases if r.name is not None or r.name != "" ]
+            {"tag": r.tag_name,
+             "published_at": format_date_utc_iso(r.published_at),
+             "download": downloads[r.tag_name]
+             }
+            for r in releases if r.name is not None or r.name != ""]
         # downloads = [ a.download_count for r in releases for a in r.assets() ]
         metadata["download_count"] = sum(downloads.values())
     except Exception as e:
@@ -366,7 +387,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
         try:
             if metadata["readme"]:
                 print(repo.full_name, "put README attachment")
-                my_repo_doc.put_attachment("README.md", "text/markdown; charset=utf-8", readme.encode('utf-8') )
+                my_repo_doc.put_attachment("README.md", "text/markdown; charset=utf-8", readme.encode('utf-8'))
         except Exception as e:
             print("ERROR attaching readme", repo.full_name, str(e))
     except Exception as e:
@@ -379,20 +400,20 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
             aconrtib = cs.as_dict()
             weeks = []
             for week in aconrtib['weeks']:
-                if week['a'] !=0 | week['d'] != 0 | week['c'] != 0:
-                    week.update(w = moment.unix(week['w']).strftime(ISO_SHORT_FORMAT))
+                if week['a'] != 0 | week['d'] != 0 | week['c'] != 0:
+                    week.update(w=moment.unix(week['w']).strftime(ISO_SHORT_FORMAT))
                     weeks.append(week)
-            aconrtib.update(weeks = weeks)
+            aconrtib.update(weeks=weeks)
             aconrtib["author_id"] = aconrtib['author']['login']
             del aconrtib['author']
             con_stat.append(aconrtib)
-        metadata["contributor_statistics"] =  con_stat
+        metadata["contributor_statistics"] = con_stat
     except Exception as e:
         print(repo.full_name, "error parsing contributor_statistics!!!\n", str(e))
         pass
 
     try:
-        metadata.update(license = repo.license().license.name)
+        metadata.update(license=repo.license().license.name)
     except Exception as e:
         print(repo.full_name, "error getting license!!!\n", str(e))
         pass
@@ -400,7 +421,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
     # languages
     metadata["main_language"] = repo.language
     try:
-        metadata["all_languages"] = [l[0]   for l in repo.languages() if l]
+        metadata["all_languages"] = [l[0] for l in repo.languages() if l]
     except Exception as e:
         print(repo.full_name, "error getting languages!!!\n", str(e))
         pass
@@ -414,20 +435,22 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
 
     # weekly_commit_count
     try:
-        metadata["commits_weekly"] = [ { "week": firstSunday.add(weeks=1).strftime(ISO_SHORT_FORMAT), "value": c } for c in repo.weekly_commit_count()["all"] ]
+        metadata["commits_weekly"] = [{"week": firstSunday.add(weeks=1).strftime(ISO_SHORT_FORMAT), "value": c} for c in
+                                      repo.weekly_commit_count()["all"]]
     except Exception as e:
         print(repo.full_name, "error getting commits!!!\n", str(e))
         pass
     # merge commits!
     if len(current_commits) > 0 and len(metadata["commits"]) > 0:
         print(repo.full_name, "merge commits")
-        first_index =  [i for i,x in enumerate(current_commits) if x["week"] == metadata["commits_weekly"][0]["week"]][0]
+        first_index = [i for i, x in enumerate(current_commits) if x["week"] == metadata["commits_weekly"][0]["week"]][
+            0]
         metadata["commits_weekly"] = current_commits[0:first_index] + metadata["commits_weekly"]
 
     # contributors
     try:
         print(repo.full_name, "get contributors")
-        metadata["contributions"] = { c.login: c.contributions for c in  repo.contributors() }
+        metadata["contributions"] = {c.login: c.contributions for c in repo.contributors()}
         metadata["contributors_id"] = list(metadata["contributions"].keys())
         metadata["contributions_total"] = sum(metadata["contributions"].values())
     except Exception as e:
@@ -435,8 +458,9 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
         pass
 
     # subscribers
-    metadata["watchers"] =  repo.watchers_count # The number of people watching this repository.
-    metadata["subscribers_count"] = repo.subscribers_count # The number of people watching (or who have subscribed to notifications about) this repository.
+    metadata["watchers"] = repo.watchers_count  # The number of people watching this repository.
+    metadata[
+        "subscribers_count"] = repo.subscribers_count  # The number of people watching (or who have subscribed to notifications about) this repository.
     try:
         print(repo.full_name, "get subscribers")
         subscribers = repo.subscribers()
@@ -448,7 +472,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
         pass
 
     # stargazers
-    metadata["stars"] = repo.stargazers_count #The number of people who have starred this repository.
+    metadata["stars"] = repo.stargazers_count  # The number of people who have starred this repository.
     try:
         print(repo.full_name, "get stargazers")
         stargazers = repo.stargazers()
@@ -482,7 +506,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
 
     try:
         print(repo.full_name, "get issues")
-        issues = get_client("search").search_issues("repo:"+repo.full_name+" is:issue", number=1)
+        issues = get_client("search").search_issues("repo:" + repo.full_name + " is:issue", number=1)
         for i in issues:
             continue
         metadata["issues_count"] = issues.total_count
@@ -494,7 +518,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
 
     try:
         print(repo.full_name, "get pull_requests")
-        pull_requests = get_client("search").search_issues("repo:"+repo.full_name+" is:pr", number=1)
+        pull_requests = get_client("search").search_issues("repo:" + repo.full_name + " is:pr", number=1)
         for i in pull_requests:
             continue
         metadata["pull_requests_count"] = pull_requests.total_count
@@ -517,7 +541,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
 
     try:
         print(repo.full_name, "get travis")
-        travis = get_client("search").search_code("travis in:path repo:"+repo.full_name, number=1)
+        travis = get_client("search").search_code("travis in:path repo:" + repo.full_name, number=1)
         for i in travis:
             continue
         if travis.total_count > 0:
@@ -531,7 +555,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
 
     try:
         print(repo.full_name, "get jenkins")
-        jenkins = get_client("search").search_code("jenkins in:path repo:"+repo.full_name, number=1)
+        jenkins = get_client("search").search_code("jenkins in:path repo:" + repo.full_name, number=1)
         for i in jenkins:
             continue
         if jenkins.total_count > 0:
@@ -545,7 +569,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
 
     try:
         print(repo.full_name, "get manifest")
-        manifest = get_client("search").search_code("manifest in:path repo:"+repo.full_name, number=1)
+        manifest = get_client("search").search_code("manifest in:path repo:" + repo.full_name, number=1)
         for i in manifest:
             continue
         if manifest.total_count > 0:
@@ -559,7 +583,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
 
     try:
         print(repo.full_name, "get Dockerfile")
-        manifest = get_client("search").search_code("Dockerfile in:path repo:"+repo.full_name, number=1)
+        manifest = get_client("search").search_code("Dockerfile in:path repo:" + repo.full_name, number=1)
         for i in manifest:
             continue
         if manifest.total_count > 0:
@@ -576,29 +600,31 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
         # GET /repos/:owner/:repo/community/profile
         metadata["community"] = get_community_profile(repo.full_name)
 
-        if "community" in metadata and metadata["community"] is not None and "files" in metadata["community"] and metadata["community"]["files"]["contributing"] is not None:
+        if "community" in metadata and metadata["community"] is not None and "files" in metadata["community"] and \
+                metadata["community"]["files"]["contributing"] is not None:
             print(repo.full_name, "get contributing")
             u = metadata["community"]["files"]["contributing"]["html_url"]
-            u = u.replace("/blob","").replace("github.com","raw.githubusercontent.com")
+            u = u.replace("/blob", "").replace("github.com", "raw.githubusercontent.com")
             metadata["contributing_md"] = requests.request("GET", u).text
 
     my_repo_doc = save_doc(repo.full_name, metadata)
 
-    print(15*"-", "get owner")
+    print(15 * "-", "get owner")
     get_user(repo.owner, overwrite, details=user_details)
     if get_users:
-        print(15*"-", "get contributors")
+        print(15 * "-", "get contributors")
         for c in repo.contributors():
             get_user(c, overwrite, details=user_details)
         if not contributors_only:
-            print(15*"-", "get subscribers")
+            print(15 * "-", "get subscribers")
             for s in repo.subscribers():
                 get_user(s, overwrite, details=user_details)
-            print(15*"-", "get stargazers")
+            print(15 * "-", "get stargazers")
             for s in repo.stargazers():
                 get_user(s, overwrite, details=user_details)
 
     return my_repo_doc
+
 
 def get_repo(repo_org, repo_name):
     try:
@@ -607,17 +633,20 @@ def get_repo(repo_org, repo_name):
         print("repository not found!!!", repo_org, repo_name)
         raise nfe
 
+
 def get_repo_by_fullname(fullname):
     parts = fullname.split("/")
     return get_repo(parts[0], parts[1])
 
+
 def get_user_commits(user_login, orgs):
     results = []
-    for org in [user_login]+orgs:
+    for org in [user_login] + orgs:
         commits = search_commits(user_login, org)
         results += commits
         # results += [ c["repo"] for c in commits ] # cleanup
     return results
+
 
 def search_commits(committer, org=None, from_date=2020):
     commits = []
@@ -626,8 +655,9 @@ def search_commits(committer, org=None, from_date=2020):
     PAGE_SIZE = 100
     res_items = PAGE_SIZE
     while res_items == PAGE_SIZE:
-        query = "committer:{} author:{} {}".format(committer, committer, "org:"+org if org is not None else "")
-        query = "committer-date:{}..{} sort:committer-date-desc {}".format(from_date, moment.date(last_updated_at).add(second=-1).strftime(ISO_FORMAT), query)
+        query = "committer:{} author:{} {}".format(committer, committer, "org:" + org if org is not None else "")
+        query = "committer-date:{}..{} sort:committer-date-desc {}".format(from_date, moment.date(last_updated_at).add(
+            second=-1).strftime(ISO_FORMAT), query)
         print(query)
         commits_search_result = get_client("search").search_commits(query, number=PAGE_SIZE)
         res_items = 0
@@ -642,33 +672,38 @@ def search_commits(committer, org=None, from_date=2020):
             last_updated_at = min(last_updated_at, commit["date"])
             # print(len(commits), res_items, commit, last_updated_at)
 
-        if total==0:
+        if total == 0:
             total = commits_search_result.total_count
             print("total_commits", total)
 
     print("commits", len(commits))
     return commits
 
+
 def get_user_search_issues(user_login, verb, type="issue", gh_client=None):
-    if verb not in [ "involves", "author", "assignee", "mentions", "commenter"]:
+    if verb not in ["involves", "author", "assignee", "mentions", "commenter"]:
         raise Exception("Invalid verb")
-    if type not in [ "issue", "pr"]:
+    if type not in ["issue", "pr"]:
         raise Exception("Invalid type")
     gh = gh_client if gh_client is not None else get_client()
-    issues = gh.search_issues(verb+":"+user_login+" is:"+type, number=1)
+    issues = gh.search_issues(verb + ":" + user_login + " is:" + type, number=1)
     for i in issues:
         continue
     return issues.total_count
 
+
 def get_user_issues_involved(user_login, gh_client=None):
     return get_user_search_issues(user_login, "involves", "issue", gh_client)
+
 
 def get_user_pull_requests_involved(user_login, gh_client=None):
     return get_user_search_issues(user_login, "involves", "pr", gh_client)
 
+
 def update_starred_events(repo_name):
     stargazer_event_array = get_starred_events(repo_name)
     save_doc(repo_name, {"starred_events": stargazer_event_array})
+
 
 def get_starred_events(repo_name, cut_date="2000"):
     print(repo_name, " get stargazers' starred time ")
@@ -696,18 +731,19 @@ def get_starred_events(repo_name, cut_date="2000"):
                             }
                         }
                     }
-                }""" % (repo_name_parts[1], repo_name_parts[0], "{field: STARRED_AT, direction: DESC}", PAGE_SIZE, ", after: \"{}\"".format(cursor) if cursor else "")
+                }""" % (repo_name_parts[1], repo_name_parts[0], "{field: STARRED_AT, direction: DESC}", PAGE_SIZE,
+                        ", after: \"{}\"".format(cursor) if cursor else "")
             # print(body)
             res = requests.request("POST",
                                    API_URL + "/graphql",
                                    json={'query': body},
-                                   headers = {
-                                        "Content-Type": "application/json",
-                                        "Authorization": "Bearer {}".format(get_token("graphql"))
-                                    }).json()
+                                   headers={
+                                       "Content-Type": "application/json",
+                                       "Authorization": "Bearer {}".format(get_token("graphql"))
+                                   }).json()
 
             if "errors" in res:
-                print(json.dumps(res["errors"],indent=2))
+                print(json.dumps(res["errors"], indent=2))
             try:
                 for r in res["data"]["repository"]["stargazers"]["edges"]:
                     if r:
@@ -727,6 +763,7 @@ def get_starred_events(repo_name, cut_date="2000"):
     except Exception as e:
         print(repo_name, "error \n", str(e))
         raise e
+
 
 def get_commit_history(repo_name):
     print(repo_name, " get commit history ")
@@ -767,14 +804,15 @@ def get_commit_history(repo_name):
                     }
                 }
             }
-            """ % (repo_name_parts[1], repo_name_parts[0], PAGE_SIZE, ", after: \"{}\"".format(cursor) if cursor else "")
+            """ % (
+            repo_name_parts[1], repo_name_parts[0], PAGE_SIZE, ", after: \"{}\"".format(cursor) if cursor else "")
             res = requests.request("POST",
                                    API_URL + "/graphql",
                                    json={'query': body},
-                                   headers = {
-                                        "Content-Type": "application/json",
-                                        "Authorization": "Bearer {}".format(get_token("graphql"))
-                                    }).json()
+                                   headers={
+                                       "Content-Type": "application/json",
+                                       "Authorization": "Bearer {}".format(get_token("graphql"))
+                                   }).json()
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))
             try:
@@ -785,7 +823,8 @@ def get_commit_history(repo_name):
                         committerEmail = r["node"]["committer"]["email"]
                         commits.append({"date": committedDate, "message": committedMsg, "email": committerEmail})
                 cursor = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"]["endCursor"]
-                hasNextPage = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"]["hasNextPage"]
+                hasNextPage = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"][
+                    "hasNextPage"]
             except Exception as e:
                 print(str(e))
                 hasNextPage = False
@@ -793,6 +832,77 @@ def get_commit_history(repo_name):
             page = page + 1
         print("commits", len(commits))
         return commits
+
+    except Exception as e:
+        print(repo_name, "error \n", str(e))
+        raise e
+
+
+def get_issues_history(repo_name):
+    print(repo_name, " get commit history ")
+    repo_name_parts = repo_name.split("/")
+    print(repo_name_parts)
+    try:
+        issues = []
+        PAGE_SIZE = 100
+        cursor = None
+        hasNextPage = True
+        page = 1
+        while hasNextPage:
+            print("PAGE: ", page)
+            body = """
+            {
+                  repository(owner:"%s", name: "%s") {
+                        issues(first: %d %s) {
+                              pageInfo {
+                                endCursor
+                                hasNextPage
+                              }
+                              edges {
+                                    node {
+                                      title
+                                      url
+                                      author {
+                                        login
+                                      }
+                                      createdAt
+                                      closedAt
+                                      closed
+                                    }
+                              }
+                        }
+                  }
+                }
+            """ % (
+                repo_name_parts[0], repo_name_parts[1], PAGE_SIZE, ", after: \"{}\"".format(cursor) if cursor else "")
+            res = requests.request("POST",
+                                   API_URL + "/graphql",
+                                   json={'query': body},
+                                   headers={
+                                       "Content-Type": "application/json",
+                                       "Authorization": "Bearer {}".format(get_token("graphql"))
+                                   }).json()
+            if "errors" in res:
+                print(json.dumps(res["errors"], indent=2))
+            try:
+                for r in res["data"]["repository"]["issues"]["edges"]:
+                    if r:
+                        title = r["node"]["title"]
+                        issuer = r["node"]["author"]["login"]
+                        closed = r["node"]["closed"]
+                        createdAt = format_date_utc_iso(r["node"]["createdAt"])
+                        closedAt = format_date_utc_iso(r["node"]["closedAt"])
+                        issues = {"title": title, "issuer": issuer, "closed": closed, "closedAt": closedAt,
+                                  "createdAt": createdAt}
+                cursor = res["data"]["repository"]["issues"]["endCursor"]
+                hasNextPage = res["data"]["repository"]["issues"]["pageInfo"]["hasNextPage"]
+            except Exception as e:
+                print(str(e))
+                hasNextPage = False
+                pass
+            page = page + 1
+        print("Total issues", len(issues))
+        return issues
 
     except Exception as e:
         print(repo_name, "error \n", str(e))
