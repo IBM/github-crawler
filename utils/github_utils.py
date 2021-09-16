@@ -925,14 +925,11 @@ def get_fork_history(repo_name, cut_date="2000"):
             body = """
                  {
                     repository(owner: "%s", name: "%s") {
-                    name
-                    forkCount
                     forks(orderBy: %s, first: %d %s ) {
-                        totalCount
-                            pageInfo {
-                                endCursor
-                                hasNextPage
-                            }
+                        pageInfo {
+                            endCursor
+                            hasNextPage
+                        }
                         nodes {
                             name
                             createdAt
@@ -977,6 +974,65 @@ def get_fork_history(repo_name, cut_date="2000"):
             page = page + 1
         print("Total forks", len(forks))
         return forks
+
+    except Exception as e:
+        print(repo_name, "error \n", str(e))
+        raise e
+
+
+def get_watcher_events(repo_name, cut_date="2000"):
+    print(repo_name, " get watchers' time ")
+    repo_name_parts = repo_name.split("/")
+    try:
+        watchers = {}
+        PAGE_SIZE = 100
+        cursor = None
+        hasNextPage = True
+        while hasNextPage:
+            print(len(watchers.keys()), cursor)
+            body = """
+                {
+                    repository(owner: "%s", name: "%s") {
+                        watchers( first: %d %s) {
+                            nodes {
+                                login
+                                createdAt
+                            }
+                            pageInfo {
+                                endCursor
+                                hasNextPage
+                            }
+                        }
+                    }
+                }""" % (repo_name_parts[0],
+                        repo_name_parts[1],
+                        PAGE_SIZE,
+                        ", after: \"{}\"".format(cursor) if cursor else "")
+            res = requests.request("POST",
+                                   API_URL + "/graphql",
+                                   json={'query': body},
+                                   headers={
+                                       "Content-Type": "application/json",
+                                       "Authorization": "Bearer {}".format(get_token("graphql"))
+                                   }).json()
+
+            if "errors" in res:
+                print(json.dumps(res["errors"], indent=2))
+            try:
+                for r in res["data"]["repository"]["watchers"]["nodes"]:
+                    if r:
+                        createdAt = format_date_utc_iso(r["createdAt"])
+                        if createdAt < cut_date:
+                            break
+                        watchers[r["login"]] = createdAt
+                page = res["data"]["repository"]["watchers"]["pageInfo"]
+                cursor = page["endCursor"]
+                hasNextPage = page["hasNextPage"]
+            except Exception as e:
+                print(str(e))
+                raise e
+        print("watchers", len(watchers))
+        return watchers
 
     except Exception as e:
         print(repo_name, "error \n", str(e))
