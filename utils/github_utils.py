@@ -952,7 +952,6 @@ def get_fork_history(repo_name, cut_date="2000"):
                                        "Content-Type": "application/json",
                                        "Authorization": "Bearer {}".format(get_token("graphql"))
                                    }).json()
-            print (res)
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))
             try:
