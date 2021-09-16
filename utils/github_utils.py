@@ -839,7 +839,7 @@ def get_commit_history(repo_name):
 
 
 def get_issues_history(repo_name):
-    print(repo_name, " get commit history ")
+    print(repo_name, " get issue history ")
     repo_name_parts = repo_name.split("/")
     print(repo_name_parts)
     try:
@@ -852,29 +852,29 @@ def get_issues_history(repo_name):
             print("PAGE: ", page)
             body = """
             {
-                  repository(owner:"%s", name: "%s") {
-                        issues(first: %d %s) {
-                              pageInfo {
-                                endCursor
-                                hasNextPage
-                              }
-                              edges {
-                                    node {
-                                      title
-                                      url
-                                      author {
-                                        login
-                                      }
-                                      createdAt
-                                      closedAt
-                                      closed
-                                    }
-                              }
+                repository(owner:"%s", name: "%s") {
+                    issues(orderBy: %s, first: %d %s ) {
+                        pageInfo {
+                            endCursor
+                            hasNextPage
                         }
-                  }
+                        nodes {
+                            createdAt
+                            author {
+                                login
+                            }
+                            closedAt
+                            title
+                        }
+                    }
                 }
-            """ % (
-                repo_name_parts[0], repo_name_parts[1], PAGE_SIZE, ", after: \"{}\"".format(cursor) if cursor else "")
+                }
+            """ % (repo_name_parts[0],
+                   repo_name_parts[1],
+                   "{field: CREATED_AT, direction: DESC}",
+                   PAGE_SIZE,
+                   ", after: \"{}\"".format(cursor) if cursor else "")
+            print(body)
             res = requests.request("POST",
                                    API_URL + "/graphql",
                                    json={'query': body},
@@ -885,16 +885,15 @@ def get_issues_history(repo_name):
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))
             try:
-                for r in res["data"]["repository"]["issues"]["edges"]:
+                for r in res["data"]["repository"]["issues"]["nodes"]:
                     if r:
-                        title = r["node"]["title"]
-                        issuer = r["node"]["author"]["login"]
-                        closed = r["node"]["closed"]
-                        createdAt = format_date_utc_iso(r["node"]["createdAt"])
-                        closedAt = format_date_utc_iso(r["node"]["closedAt"])
-                        issues = {"title": title, "issuer": issuer, "closed": closed, "closedAt": closedAt,
-                                  "createdAt": createdAt}
-                cursor = res["data"]["repository"]["issues"]["endCursor"]
+                        title = r["title"]
+                        issuer = r["author"]["login"] if r["author"] else None # TODO confirm if want to add none author in db
+                        createdAt = format_date_utc_iso(r["createdAt"])
+                        closedAt = format_date_utc_iso(r["closedAt"]) if r["closedAt"] else None
+                        issue = {"title": title, "issuer": issuer,  "closedAt": closedAt, "createdAt": createdAt}
+                        issues.append(issue)
+                cursor = res["data"]["repository"]["issues"]["pageInfo"]["endCursor"]
                 hasNextPage = res["data"]["repository"]["issues"]["pageInfo"]["hasNextPage"]
             except Exception as e:
                 print(str(e))
@@ -903,6 +902,78 @@ def get_issues_history(repo_name):
             page = page + 1
         print("Total issues", len(issues))
         return issues
+
+    except Exception as e:
+        print(repo_name, "error \n", str(e))
+        raise e
+
+
+def get_fork_history(repo_name):
+    print(repo_name, " get forks history ")
+    repo_name_parts = repo_name.split("/")
+    print(repo_name_parts)
+    try:
+        forks = []
+        PAGE_SIZE = 100
+        cursor = None
+        hasNextPage = True
+        page = 1
+        while hasNextPage:
+            print("PAGE: ", page)
+            body = """
+                 {
+                    repository(owner: "%s", name: "%s") {
+                    name
+                    forkCount
+                    forks(orderBy: %s, first: %d %s ) {
+                        totalCount
+                            pageInfo {
+                                endCursor
+                                hasNextPage
+                            }
+                        nodes {
+                            name
+                            createdAt
+                            owner {
+                                login
+                                }
+                            }
+                        }
+                    }
+                }
+            """ % (repo_name_parts[0],
+                   repo_name_parts[1],
+                   "{field: CREATED_AT, direction: DESC}",
+                   PAGE_SIZE,
+                   ", after: \"{}\"".format(cursor) if cursor else "")
+            print (body)
+            res = requests.request("POST",
+                                   API_URL + "/graphql",
+                                   json={'query': body},
+                                   headers={
+                                       "Content-Type": "application/json",
+                                       "Authorization": "Bearer {}".format(get_token("graphql"))
+                                   }).json()
+            print (res)
+            if "errors" in res:
+                print(json.dumps(res["errors"], indent=2))
+            try:
+                for r in res["data"]["repository"]["forks"]["nodes"]:
+                    if r:
+                        name = r["name"]
+                        forked_by = r["owner"]["login"]
+                        createdAt = format_date_utc_iso(r["createdAt"])
+                        fork = {"name": name, "forked_by": forked_by, "createdAt": createdAt}
+                        forks.append(fork)
+                cursor = res["data"]["repository"]["forks"]["pageInfo"]["endCursor"]
+                hasNextPage = res["data"]["repository"]["forks"]["pageInfo"]["hasNextPage"]
+            except Exception as e:
+                print(str(e))
+                hasNextPage = False
+                pass
+            page = page + 1
+        print("Total forks", len(forks))
+        return forks
 
     except Exception as e:
         print(repo_name, "error \n", str(e))
