@@ -825,8 +825,7 @@ def get_commit_history(repo_name, cut_date="2000"):
                         committerEmail = r["node"]["committer"]["email"]
                         commits.append({"date": committedDate, "message": committedMsg, "email": committerEmail})
                 cursor = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"]["endCursor"]
-                hasNextPage = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"][
-                    "hasNextPage"]
+                hasNextPage = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"]["hasNextPage"]
             except Exception as e:
                 print(str(e))
                 hasNextPage = False
@@ -876,7 +875,6 @@ def get_issues_history(repo_name, cut_date="2000"):
                    "{field: CREATED_AT, direction: DESC}",
                    PAGE_SIZE,
                    ", after: \"{}\"".format(cursor) if cursor else "")
-            print(body)
             res = requests.request("POST",
                                    API_URL + "/graphql",
                                    json={'query': body},
@@ -950,7 +948,6 @@ def get_fork_history(repo_name, cut_date="2000"):
                    "{field: CREATED_AT, direction: DESC}",
                    PAGE_SIZE,
                    ", after: \"{}\"".format(cursor) if cursor else "")
-            print (body)
             res = requests.request("POST",
                                    API_URL + "/graphql",
                                    json={'query': body},
