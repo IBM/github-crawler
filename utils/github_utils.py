@@ -765,7 +765,7 @@ def get_starred_events(repo_name, cut_date="2000"):
         raise e
 
 
-def get_commit_history(repo_name):
+def get_commit_history(repo_name, cut_date="2000"):
     print(repo_name, " get commit history ")
     repo_name_parts = repo_name.split("/")
     print(repo_name_parts)
@@ -819,6 +819,8 @@ def get_commit_history(repo_name):
                 for r in res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["edges"]:
                     if r:
                         committedDate = format_date_utc_iso(r["node"]["committedDate"])
+                        if committedDate < cut_date:
+                            break
                         committedMsg = r["node"]["message"]
                         committerEmail = r["node"]["committer"]["email"]
                         commits.append({"date": committedDate, "message": committedMsg, "email": committerEmail})
@@ -838,7 +840,7 @@ def get_commit_history(repo_name):
         raise e
 
 
-def get_issues_history(repo_name):
+def get_issues_history(repo_name, cut_date="2000"):
     print(repo_name, " get issue history ")
     repo_name_parts = repo_name.split("/")
     print(repo_name_parts)
@@ -887,9 +889,11 @@ def get_issues_history(repo_name):
             try:
                 for r in res["data"]["repository"]["issues"]["nodes"]:
                     if r:
+                        createdAt = format_date_utc_iso(r["createdAt"])
+                        if createdAt < cut_date:
+                            break
                         title = r["title"]
                         issuer = r["author"]["login"] if r["author"] else None # TODO confirm if want to add none author in db
-                        createdAt = format_date_utc_iso(r["createdAt"])
                         closedAt = format_date_utc_iso(r["closedAt"]) if r["closedAt"] else None
                         issue = {"title": title, "issuer": issuer,  "closedAt": closedAt, "createdAt": createdAt}
                         issues.append(issue)
@@ -908,7 +912,7 @@ def get_issues_history(repo_name):
         raise e
 
 
-def get_fork_history(repo_name):
+def get_fork_history(repo_name, cut_date="2000"):
     print(repo_name, " get forks history ")
     repo_name_parts = repo_name.split("/")
     print(repo_name_parts)
@@ -960,9 +964,11 @@ def get_fork_history(repo_name):
             try:
                 for r in res["data"]["repository"]["forks"]["nodes"]:
                     if r:
+                        createdAt = format_date_utc_iso(r["createdAt"])
+                        if createdAt < cut_date:
+                            break
                         name = r["name"]
                         forked_by = r["owner"]["login"]
-                        createdAt = format_date_utc_iso(r["createdAt"])
                         fork = {"name": name, "forked_by": forked_by, "createdAt": createdAt}
                         forks.append(fork)
                 cursor = res["data"]["repository"]["forks"]["pageInfo"]["endCursor"]
