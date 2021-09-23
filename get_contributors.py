@@ -24,7 +24,7 @@ def main(args):
         sort = "desc"
 
     print(limit, skip, sort)
-    
+
     repos = [ r["_id"] for r in db.get_query_result({
                 "type":"Repo",
                 # "topics": { "$elemMatch": { "$in": ["machine-learning", "deep-learning" ] } },
@@ -49,7 +49,7 @@ def main(args):
             if c.login not in users:
                 gh.get_user(c, overwrite=False, details=False)
                 users.append(c.login)
-        
+
         contributions = { c.login: c.contributions for c in contributors }
         print(len(contributions))
         save_doc(repo_id, {"contributions": contributions})

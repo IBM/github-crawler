@@ -25,7 +25,8 @@ def main(args):
 
     repos = [ r for r in db.get_query_result({
                 "type":"Repo",
-                "stargazers_events": { "$exists": False }
+                "stargazers_events": { "$exists": False },
+                "stars": { "$lt": 200 }
             },["_id", "stars"], limit=limit, skip=skip, raw_result=True, sort=[{'stars': sort}] )["docs"] ]
 
     print("repos", len(repos))

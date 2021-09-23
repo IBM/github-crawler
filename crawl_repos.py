@@ -25,8 +25,14 @@ def process(topic, stars, size):
                 gh.extract_metadata(r.repository, overwrite=False, get_users=False, contributors_only=True)
 
 if __name__ == "__main__":
+    try:
+        topic = sys.argv[1]
+    except:
+        print("missing topic name")
+        exit(0)
+
     results = db.get_view_result(
-                    '_design/types', 
+                    '_design/types',
                     "types",
                     key="Repo",
                     reduce=False,
@@ -40,9 +46,14 @@ if __name__ == "__main__":
     try:
         stars = int(sys.argv[2])
     except:
-        stars = 5
+        stars = 0
 
-    for size in [ "1..100", "101..200", "201..500", "501..1000", "1001..2000", "2001..5000", "5001..10000", ">10000"]:
-        process(sys.argv[1], stars, size)
+    try:
+        sizes = sys.argv[3].split(",") #[ "1..100", "101..200", "201..500", "501..1000", "1001..2000", "2001..5000", "5001..10000", ">10000"]
+    except:
+        sizes =  [">0"]
+
+    for size in sizes:
+        process(topic, stars, size)
 
     # topics = [ "ai", "artificial-intelligence", "nn", "neural-network", "ml", "machine-learning", "dl", "deep-learning" ]
