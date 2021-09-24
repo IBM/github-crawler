@@ -25,15 +25,11 @@ def main(args):
 
     print(limit, skip, sort)
 
-    repos = [ r["_id"] for r in db.get_query_result({
+    repos = db.get_query_result({
                 "type":"Repo",
                 # "topics": { "$elemMatch": { "$in": ["machine-learning", "deep-learning" ] } },
-                "contributions": { "$exists": False },
-                "contributors_id": {
-                    "$exists": True,
-                    "$not": { "$size": 0 }
-                }
-            },["_id"], limit=limit, skip=skip, raw_result=True, sort=[{'pushed_at': sort}] )["docs"] ]
+                #"contributions": { "$exists": False }
+            },["_id", "contributors_id"], limit=limit, skip=skip, raw_result=True, sort=[{'pushed_at': sort}] )["docs"]
 
     print("repos", len(repos))
 
@@ -41,18 +37,13 @@ def main(args):
     print("users", len(users))
 
     # crawl the repos
-    for repo_id in repos:
-        print("\n", repo_id)
-        contributors = gh.get_repo_by_fullname(repo_id).contributors()
-        for c in contributors:
-            print(c.login)
-            if c.login not in users:
+    for repo in repos:
+        print("\n", repo["_id"])
+        for c in repo["contributors_id"]:
+            print(c)
+            if c not in users:
                 gh.get_user(c, overwrite=False, details=False)
-                users.append(c.login)
-
-        contributions = { c.login: c.contributions for c in contributors }
-        print(len(contributions))
-        save_doc(repo_id, {"contributions": contributions})
+                users.append(c)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
