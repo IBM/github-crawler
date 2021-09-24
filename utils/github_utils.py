@@ -17,12 +17,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com")
+HTTP_API_URL = API_URL if "api" in API_URL else API_URL.replace("https://", "https://api.")
 try:
     n = int(os.getenv("TOKENS"))
 except:
     n = None
 gh_tokens = os.getenv("GITHUB_TOKENS").split(",")[0:n]
-
 
 # print(API_URL, gh_tokens)
 
@@ -31,7 +31,6 @@ def login(token):
         return github3.enterprise_login(url=API_URL, username=token.split(":")[0], password=token.split(":")[1])
     else:
         return github3.login(token=token)
-
 
 gh_clients = []
 for t in gh_tokens:
@@ -61,13 +60,20 @@ def get_max_index_limit(resource="core"):
         # print([ gh.rate_limit()['resources']["core"] for gh in gh_clients ])
         return max_index
     except Exception as e:
-        print("Exception", str(e))
+        # print("Exception", str(e))
         return randrange(len(gh_clients))
 
 
 def get_token(resource="core"):
     return gh_tokens[get_max_index_limit(resource)]
 
+def get_authorization_header(resource="core"):
+    t = gh_tokens[get_max_index_limit(resource)]
+    if ":" in t:
+        import base64
+        return "Basic {}".format(base64.b64encode(t.encode()).decode())  
+    else:
+        return "Bearer {}".format(t)
 
 def get_rand_client():
     i = randrange(len(gh_clients))
@@ -705,6 +711,15 @@ def update_starred_events(repo_name):
     save_doc(repo_name, {"starred_events": stargazer_event_array})
 
 
+def graphql_api(body):
+    return requests.request("POST",
+                                   HTTP_API_URL + "/graphql",
+                                   json={'query': body},
+                                   headers={
+                                       "Content-Type": "application/json",
+                                       "Authorization": get_authorization_header()
+                                   }).json()
+
 def get_starred_events(repo_name, cut_date="2000"):
     print(repo_name, " get stargazers' starred time ")
     repo_name_parts = repo_name.split("/")
@@ -733,15 +748,7 @@ def get_starred_events(repo_name, cut_date="2000"):
                     }
                 }""" % (repo_name_parts[1], repo_name_parts[0], "{field: STARRED_AT, direction: DESC}", PAGE_SIZE,
                         ", after: \"{}\"".format(cursor) if cursor else "")
-            # print(body)
-            res = requests.request("POST",
-                                   API_URL + "/graphql",
-                                   json={'query': body},
-                                   headers={
-                                       "Content-Type": "application/json",
-                                       "Authorization": "Bearer {}".format(get_token("graphql"))
-                                   }).json()
-
+            res = graphql_api(body)
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))
             try:
@@ -806,13 +813,7 @@ def get_commit_history(repo_name, cut_date="2000"):
             }
             """ % (
             repo_name_parts[1], repo_name_parts[0], PAGE_SIZE, ", after: \"{}\"".format(cursor) if cursor else "")
-            res = requests.request("POST",
-                                   API_URL + "/graphql",
-                                   json={'query': body},
-                                   headers={
-                                       "Content-Type": "application/json",
-                                       "Authorization": "Bearer {}".format(get_token("graphql"))
-                                   }).json()
+            res = graphql_api(body)
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))
             try:
@@ -875,13 +876,7 @@ def get_issues_history(repo_name, cut_date="2000"):
                    "{field: CREATED_AT, direction: DESC}",
                    PAGE_SIZE,
                    ", after: \"{}\"".format(cursor) if cursor else "")
-            res = requests.request("POST",
-                                   API_URL + "/graphql",
-                                   json={'query': body},
-                                   headers={
-                                       "Content-Type": "application/json",
-                                       "Authorization": "Bearer {}".format(get_token("graphql"))
-                                   }).json()
+            res = graphql_api(body)
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))
             try:
@@ -945,13 +940,7 @@ def get_fork_history(repo_name, cut_date="2000"):
                    "{field: CREATED_AT, direction: DESC}",
                    PAGE_SIZE,
                    ", after: \"{}\"".format(cursor) if cursor else "")
-            res = requests.request("POST",
-                                   API_URL + "/graphql",
-                                   json={'query': body},
-                                   headers={
-                                       "Content-Type": "application/json",
-                                       "Authorization": "Bearer {}".format(get_token("graphql"))
-                                   }).json()
+            res = graphql_api(body)
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))
             try:
@@ -1007,13 +996,7 @@ def get_watcher_events(repo_name, cut_date="2000"):
                         repo_name_parts[1],
                         PAGE_SIZE,
                         ", after: \"{}\"".format(cursor) if cursor else "")
-            res = requests.request("POST",
-                                   API_URL + "/graphql",
-                                   json={'query': body},
-                                   headers={
-                                       "Content-Type": "application/json",
-                                       "Authorization": "Bearer {}".format(get_token("graphql"))
-                                   }).json()
+            res = graphql_api(body)
 
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))

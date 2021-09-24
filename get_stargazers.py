@@ -7,7 +7,7 @@ import utils.github_utils as gh
 from utils.cloudant_utils import cloudant_db as db, save_doc
 
 def main(args):
-    
+
     try:
         limit = int(args[0])
     except:
@@ -26,7 +26,7 @@ def main(args):
     repos = [ r for r in db.get_query_result({
                 "type":"Repo",
                 "stargazers_events": { "$exists": False },
-                "stars": { "$lt": 200 }
+                "stars": { "$gt": 0 }
             },["_id", "stars"], limit=limit, skip=skip, raw_result=True, sort=[{'stars': sort}] )["docs"] ]
 
     print("repos", len(repos))
