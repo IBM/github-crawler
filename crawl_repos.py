@@ -26,7 +26,7 @@ def process(topic, stars, size):
 
 if __name__ == "__main__":
     try:
-        topic = sys.argv[1]
+        topics = sys.argv[1].split(",")
     except:
         print("missing topic name")
         exit(0)
@@ -53,7 +53,8 @@ if __name__ == "__main__":
     except:
         sizes =  [">0"]
 
-    for size in sizes:
-        process(topic, stars, size)
+    for topic in topics:
+        for size in sizes:
+            process(topic, stars, size)
 
     # topics = [ "ai", "artificial-intelligence", "nn", "neural-network", "ml", "machine-learning", "dl", "deep-learning" ]
