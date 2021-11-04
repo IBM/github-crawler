@@ -71,7 +71,7 @@ def get_authorization_header(resource="core"):
     t = gh_tokens[get_max_index_limit(resource)]
     if ":" in t:
         import base64
-        return "Basic {}".format(base64.b64encode(t.encode()).decode())  
+        return "Basic {}".format(base64.b64encode(t.encode()).decode())
     else:
         return "Bearer {}".format(t)
 
@@ -1015,6 +1015,98 @@ def get_watcher_events(repo_name, cut_date="2000"):
                 raise e
         print("watchers", len(watchers))
         return watchers
+
+    except Exception as e:
+        print(repo_name, "error \n", str(e))
+        raise e
+
+
+def get_README_history(repo_name, cut_date="2000"):
+    print(repo_name, " get README history ")
+    repo_name_parts = repo_name.split("/")
+    try:
+        response = {}
+        commits = []
+        PAGE_SIZE = 100
+        cursor = None
+        hasNextPage = True
+        while hasNextPage:
+            print(len(response.keys()), cursor)
+            body = """
+            {
+                repository(owner: "%s", name: "%s") {
+                    content: object(expression: "master:README.md") {
+                        ... on Blob {
+                            text
+                        }
+                    }
+                    info: ref(qualifiedName: "master") {
+                        target {
+                            ... on Commit {
+                                history(path: "README.md", first: %d %s ) {
+                                    nodes {
+                                        author {
+                                            user {
+                                                login
+                                            }
+                                        }
+                                        id
+                                        additions
+                                        deletions
+                                        resourcePath
+                                        url
+                                        committedDate
+                                    }
+                                    pageInfo {
+                                              hasNextPage
+                                              endCursor
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }""" % (repo_name_parts[0],
+                    repo_name_parts[1],
+                    PAGE_SIZE,
+                    ", after: \"{}\"".format(cursor) if cursor else "",
+                    )
+            res = graphql_api(body)
+            print (res)
+            if "errors" in res:
+                print(json.dumps(res["errors"], indent=2))
+            try:
+                r = res["data"]["repository"]
+                if r:
+                    content = r['content']['text']
+                    history = r['info']['target']['history']
+                    nodes = history['nodes']
+                    if content not in response:
+                        response['content'] = content
+
+                    for n in nodes:
+                        committedDate = format_date_utc_iso(n["committedDate"])
+                        if committedDate < cut_date:
+                            break
+                        url = n['url']
+                        commits.append({
+                            'committeDate': committedDate,
+                            'login': n['author']['user']['login'] if n['author']['user'] else None,
+                            'additions': n['additions'],
+                            'deletions': n['deletions']
+                        })
+                        #todo recursively make a post request to get the history of each commit url
+
+                    page = history["pageInfo"]
+                    cursor = page["endCursor"]
+                    hasNextPage = page["hasNextPage"]
+
+                response['history'] = commits
+            except Exception as e:
+                print(repo_name, "error \n", str(e))
+                raise e
+        print("README history", len(response))
+        return response
 
     except Exception as e:
         print(repo_name, "error \n", str(e))
