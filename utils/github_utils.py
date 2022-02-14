@@ -316,7 +316,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
         "name": repo.name,
         "description": repo.description,
         "homepage": repo.homepage,
-        "url": None,
+        # "url": None,
         "created_at": format_date_utc_iso(repo.created_at),
         "updated_at": format_date_utc_iso(repo.updated_at),
         "pushed_at": format_date_utc_iso(repo.pushed_at),
@@ -326,10 +326,10 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
         "size": repo.size,
         # "source": repo.source,
         "open_issues": repo.open_issues_count,
-        "archived": repo.archived,
+        # "archived": repo.archived,
         "disabled": repo.disabled,
-        "mirror_url": repo.mirror_url,
-        "public": True,
+        # "mirror_url": repo.mirror_url,
+        # "public": True,
         "has_downloads": repo.has_downloads,
         "has_issues": repo.has_issues,
         "has_pages": repo.has_pages,
@@ -611,7 +611,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
             print(repo.full_name, "get contributing")
             u = metadata["community"]["files"]["contributing"]["html_url"]
             u = u.replace("/blob", "").replace("github.com", "raw.githubusercontent.com")
-            metadata["contributing_md"] = requests.request("GET", u).text
+            my_repo_doc.put_attachment("CONTRIBUTING.md", "text/markdown; charset=utf-8", requests.request("GET", u).text)
 
     my_repo_doc = save_doc(repo.full_name, metadata)
 

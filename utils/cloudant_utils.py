@@ -20,7 +20,12 @@ try:
     cloudant_db = cloudant_client[db_name]
 except:
     cloudant_db = cloudant_client.create_database(db_name)
-    cloudant_db.create_query_index(fields=[ "_id", "type", "email", "topics", "stars", "crawled_updated_at" ])
+    cloudant_db.create_query_index(fields=[ "type" ])
+    cloudant_db.create_query_index(fields=[ "email" ])
+    cloudant_db.create_query_index(fields=[ "topics" ])
+    cloudant_db.create_query_index(fields=[ "stars" ])
+    cloudant_db.create_query_index(fields=[ "crawled_updated_at" ])
+    cloudant_db.create_query_index(fields=[ "pushed_at"])
 
 if cloudant_db.exists():
     print('SUCCESS connecting to Cloudant db', db_name)
