@@ -611,8 +611,10 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
             print(repo.full_name, "get contributing")
             u = metadata["community"]["files"]["contributing"]["html_url"]
             u = u.replace("/blob", "").replace("github.com", "raw.githubusercontent.com")
-            my_repo_doc.put_attachment("CONTRIBUTING.md", "text/markdown; charset=utf-8", requests.request("GET", u).text)
-
+            try:
+                my_repo_doc.put_attachment("CONTRIBUTING.md", "text/markdown; charset=utf-8", requests.request("GET", u).text.encode('utf-8'))
+            except:
+                print("error downloading CONTRIBUTING.md")
     my_repo_doc = save_doc(repo.full_name, metadata)
 
     print(15 * "-", "get owner")
