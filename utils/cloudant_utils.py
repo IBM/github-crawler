@@ -26,6 +26,9 @@ except:
     cloudant_db.create_query_index(fields=[ "stars" ])
     cloudant_db.create_query_index(fields=[ "crawled_updated_at" ])
     cloudant_db.create_query_index(fields=[ "pushed_at"])
+    cloudant_db.create_query_index(fields=[ "commits_count"])
+    cloudant_db.create_query_index(fields=[ "issues_count"])
+    cloudant_db.create_query_index(fields=[ "forks_count"])
 
 if cloudant_db.exists():
     print('SUCCESS connecting to Cloudant db', db_name)

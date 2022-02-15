@@ -803,6 +803,7 @@ def get_commit_history(repo_name, cut_date="2000"):
                                                     committedDate
                                                     message
                                                     committer {
+                                                          login
                                                           email
                                                     }             
                                               }
@@ -912,7 +913,7 @@ def get_fork_history(repo_name, cut_date="2000"):
     repo_name_parts = repo_name.split("/")
     print(repo_name_parts)
     try:
-        forks = []
+        forks = {}
         PAGE_SIZE = 100
         cursor = None
         hasNextPage = True
@@ -951,10 +952,7 @@ def get_fork_history(repo_name, cut_date="2000"):
                         createdAt = format_date_utc_iso(r["createdAt"])
                         if createdAt < cut_date:
                             break
-                        name = r["name"]
-                        forked_by = r["owner"]["login"]
-                        fork = {"name": name, "forked_by": forked_by, "createdAt": createdAt}
-                        forks.append(fork)
+                        forks[r["owner"]["login"]] = createdAt
                 cursor = res["data"]["repository"]["forks"]["pageInfo"]["endCursor"]
                 hasNextPage = res["data"]["repository"]["forks"]["pageInfo"]["hasNextPage"]
             except Exception as e:
