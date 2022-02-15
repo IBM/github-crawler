@@ -39,11 +39,15 @@ def main(args):
     # crawl the repos
     for repo in repos:
         print("\n", repo["_id"])
-        for c in repo["contributors_id"]:
-            print(c)
-            if c not in users:
-                gh.get_user(c, overwrite=False, details=False)
-                users.append(c)
+        try:
+            contributors = repo["contributors_id"] if "contributors_id" in repo else [c.login for c in gh.get_repo_by_fullname(repo["_id"]).contributors()]
+            for c in contributors:
+                print(c)
+                if c not in users:
+                    gh.get_user(c, overwrite=False, details=False)
+                    users.append(c)
+        except:
+            print("error gettinng users")
 
 if __name__ == "__main__":
     main(sys.argv[1:])
