@@ -12,7 +12,7 @@ def process(topic, stars, size):
     last_star = stars
     res_items = PAGE_SIZE
     while res_items == PAGE_SIZE:
-        query = "topic:{} stars:>={} size:{} archived:false".format(topic, last_star, size)
+        query = "topic:{} stars:>={} size:{} archived:false mirror:false".format(topic, last_star, size)
         print(query)
         res_items = 0
         repos_search_result = gh.get_client("search").search_repositories(query, number=PAGE_SIZE, sort="stars", order="asc")
@@ -37,7 +37,7 @@ if __name__ == "__main__":
                     key="Repo",
                     reduce=False,
                     descending=False,
-                    page_size=20000,
+                    page_size=100000,
                     skip=0)
     repos = [ r['id'] for r in results ]
     print(repos)
