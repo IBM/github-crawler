@@ -29,6 +29,7 @@ except:
     cloudant_db.create_query_index(fields=[ "commits_count"])
     cloudant_db.create_query_index(fields=[ "issues_count"])
     cloudant_db.create_query_index(fields=[ "forks_count"])
+    cloudant_db.create_query_index(fields=[ "watchers"])
 
 if cloudant_db.exists():
     print('SUCCESS connecting to Cloudant db', db_name)
