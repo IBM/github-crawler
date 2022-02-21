@@ -20,19 +20,15 @@ try:
     cloudant_db = cloudant_client[db_name]
 except:
     cloudant_db = cloudant_client.create_database(db_name)
-    cloudant_db.create_query_index(fields=[ "type" ])
-    cloudant_db.create_query_index(fields=[ "email" ])
-    cloudant_db.create_query_index(fields=[ "topics" ])
-    cloudant_db.create_query_index(fields=[ "stars" ])
-    cloudant_db.create_query_index(fields=[ "crawled_updated_at" ])
-    cloudant_db.create_query_index(fields=[ "pushed_at"])
-    cloudant_db.create_query_index(fields=[ "commits_count"])
-    cloudant_db.create_query_index(fields=[ "issues_count"])
-    cloudant_db.create_query_index(fields=[ "forks_count"])
-    cloudant_db.create_query_index(fields=[ "watchers"])
 
 if cloudant_db.exists():
     print('SUCCESS connecting to Cloudant db', db_name)
+
+    current_indexes = [ list(i.definition["fields"][0].keys())[0] for i in cloudant_db.get_query_indexes() ]
+    for index_field in ['email', 'issues_count', 'type', 'topics', 'stars', 'commits_count', 'crawled_updated_at', 'pushed_at', 'forks_count', 'watchers']:
+        if index_field not in current_indexes:
+            print("Creating query index on field "+index_field)
+            cloudant_db.create_query_index(fields=[ index_field ])
 
     if "_design/types" not in cloudant_db:
         ddoc = cloudant_db.create_document({ "_id": "_design/types"} )
