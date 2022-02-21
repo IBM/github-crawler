@@ -8,27 +8,44 @@ from utils.cloudant_utils import cloudant_db as db, save_doc
 
 
 def main(args):
+
     try:
-        limit = int(args[0])
+        events = args[0].split(",")
+    except:
+        events = [ "commits", "issues", "forks", "watchers", "stars" ]
+
+    try:
+        limit = int(args[1])
     except:
         limit = 1000
 
     try:
-        skip = int(args[1])
+        skip = int(args[2])
     except:
         skip = 0
     try:
-        sort = "asc" if args[2] == "asc" else "desc"
+        sort = "asc" if args[3] == "asc" else "desc"
     except:
         sort = "desc"
+    
+    try:
+        since = args[4]
+    except:
+        since = "2020-01-01"
 
-    get_commit_events(limit, skip, sort, cutoff="2019-01-01")
-    get_issues_events(limit, skip, sort, cutoff="2019-01-01")
-    get_fork_events(limit, skip, sort, cutoff="2019-01-01")
-    get_watcher_events(limit, skip, sort, cutoff="2019-01-01")
+    if "commits" in events:
+        get_commits_events(limit, skip, sort, cutoff=since)
+    if "issues" in events:
+        get_issues_events(limit, skip, sort, cutoff=since)
+    if "forks" in events:
+        get_forks_events(limit, skip, sort, cutoff=since)
+    if "watchers" in events:
+        get_watchers_events(limit, skip, sort, cutoff=since)
+    if "stars" in events:
+        get_stars_events(limit, skip, sort, cutoff=since)
 
 
-def get_commit_events(limit, skip, sort, cutoff):
+def get_commits_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
         "commits_events": {"$exists": False},
@@ -50,7 +67,6 @@ def get_commit_events(limit, skip, sort, cutoff):
         except Exception as e:
             print(str(e))
             pass
-
 
 def get_issues_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
@@ -75,8 +91,7 @@ def get_issues_events(limit, skip, sort, cutoff):
             print(str(e))
             pass
 
-
-def get_fork_events(limit, skip, sort, cutoff):
+def get_forks_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
         "forks_events": {"$exists": False},
@@ -100,8 +115,7 @@ def get_fork_events(limit, skip, sort, cutoff):
             print(str(e))
             pass
 
-
-def get_watcher_events(limit, skip, sort, cutoff):
+def get_watchers_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
         "watcher_events": {"$exists": False},
@@ -115,7 +129,7 @@ def get_watcher_events(limit, skip, sort, cutoff):
         repo_id = repo["_id"]
         try:
             print("repo idddd>>>>>", repo_id)
-            watchers = gh.get_watcher_events(repo_id, "2016-01-01")
+            watchers = gh.get_watcher_events(repo_id, cutoff)
             print (watchers)
             watchers = [] if watchers is None else watchers
             save_doc(repo_id + "/watchers", {"type": "RepoWatchers", "repo_id": repo_id, "watchers": watchers})
@@ -126,6 +140,30 @@ def get_watcher_events(limit, skip, sort, cutoff):
             print(str(e))
             pass
 
+def get_stars_events(limit, skip, sort, cutoff):
+    repos = [r for r in db.get_query_result({
+        "type": "Repo",
+        "stargazers_events": {"$exists": False},
+        "stars": {"$gt": 0}
+    }, ["_id", "stars"], limit=limit, skip=skip, raw_result=True, sort=[{'stars': sort}])["docs"]]
+
+    print("repos", len(repos))
+
+    for repo in repos:
+        print("\n", repo)
+        repo_id = repo["_id"]
+        try:
+            print("repo idddd>>>>>", repo_id)
+            stargazers = gh.get_starred_events(repo_id, cutoff)
+            print (stargazers)
+            stargazers = [] if stargazers is None else stargazers
+            save_doc(repo_id + "/stargazers", {"type": "RepoStargazers", "repo_id": repo_id, "stargazers": stargazers})
+            save_doc(repo_id, {
+                "stargazers_events_id": repo_id + "/stargazers",
+                "stargazers_events": len(stargazers)})
+        except Exception as e:
+            print(str(e))
+            pass
 
 if __name__ == "__main__":
     main(sys.argv[1:])
