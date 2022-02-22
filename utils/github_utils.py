@@ -797,16 +797,14 @@ def get_commit_history(repo_name, cut_date="2000"):
                                               hasNextPage
                                               endCursor
                                         }
-                                        edges {
-                                              cursor
-                                              node {
-                                                    committedDate
-                                                    message
-                                                    committer {
+                                        nodes {
+                                              committer {
+                                                    date
+                                                    user {
                                                           login
-                                                          email
                                                     }             
                                               }
+                                              message
                                         }
                                   }
                             }
@@ -820,14 +818,14 @@ def get_commit_history(repo_name, cut_date="2000"):
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))
             try:
-                for r in res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["edges"]:
+                for r in res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["nodes"]:
                     if r:
-                        committedDate = format_date_utc_iso(r["node"]["committedDate"])
+                        committedDate = format_date_utc_iso(r["committer"]["date"])
                         if committedDate < cut_date:
                             break
-                        committedMsg = r["node"]["message"]
-                        committerEmail = r["node"]["committer"]["email"]
-                        commits.append({"date": committedDate, "message": committedMsg, "email": committerEmail})
+                        committedMsg = r["message"]
+                        committerLogin = r["committer"]["user"]["login"]
+                        commits.append({"date": committedDate, "message": committedMsg, "committer": committerLogin})
                 cursor = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"]["endCursor"]
                 hasNextPage = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"]["hasNextPage"]
             except Exception as e:
@@ -1031,7 +1029,7 @@ def get_README_history(repo_name, cut_date="2000"):
         cursor = None
         hasNextPage = True
         while hasNextPage:
-            print(len(response.keys()), cursor)
+            # print(len(response.keys()), cursor)
             body = """
             {
                 repository(owner: "%s", name: "%s") {
@@ -1072,7 +1070,7 @@ def get_README_history(repo_name, cut_date="2000"):
                     ", after: \"{}\"".format(cursor) if cursor else "",
                     )
             res = graphql_api(body)
-            print (res)
+            # print (res)
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))
             try:
@@ -1093,7 +1091,8 @@ def get_README_history(repo_name, cut_date="2000"):
                             'committeDate': committedDate,
                             'login': n['author']['user']['login'] if n['author']['user'] else None,
                             'additions': n['additions'],
-                            'deletions': n['deletions']
+                            'deletions': n['deletions'],
+                            'url': n['url']
                         })
                         #todo recursively make a post request to get the history of each commit url
 
