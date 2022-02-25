@@ -118,7 +118,7 @@ def get_forks_events(limit, skip, sort, cutoff):
 def get_watchers_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        "watcher_events": {"$exists": False},
+        "watchers_events": {"$exists": False},
         "watchers": {"$gt": 0}
     }, ["_id", "watchers"], limit=limit, skip=skip, raw_result=True, sort=[{'watchers': sort}])["docs"]]
 
