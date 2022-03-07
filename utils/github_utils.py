@@ -824,7 +824,7 @@ def get_commit_history(repo_name, cut_date="2000"):
                         if committedDate < cut_date:
                             break
                         committedMsg = r["message"]
-                        committerLogin = r["committer"]["user"]["login"]
+                        committerLogin = r["committer"]["user"]["login"] if r["committer"]["user"] is not None else None
                         commits.append({"date": committedDate, "message": committedMsg, "committer": committerLogin})
                 cursor = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"]["endCursor"]
                 hasNextPage = res["data"]["repository"]["defaultBranchRef"]["target"]["history"]["pageInfo"]["hasNextPage"]
