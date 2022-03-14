@@ -465,8 +465,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
 
     # subscribers
     metadata["watchers"] = repo.watchers_count  # The number of people watching this repository.
-    metadata[
-        "subscribers_count"] = repo.subscribers_count  # The number of people watching (or who have subscribed to notifications about) this repository.
+    metadata["subscribers_count"] = repo.subscribers_count  # The number of people watching (or who have subscribed to notifications about) this repository.
     try:
         print(repo.full_name, "get subscribers")
         subscribers = repo.subscribers()
@@ -1024,21 +1023,33 @@ def get_README_history(repo_name, cut_date="2000"):
     repo_name_parts = repo_name.split("/")
     try:
         response = {}
+        body = """
+            {
+                repository(owner: "%s", name: "%s") {
+                    content: object(expression: "HEAD:README.md") {
+                        ... on Blob {
+                            text
+                        }
+                    }
+                     defaultBranchRef {
+                      name
+                    }
+                }
+            }""" % (repo_name_parts[0], repo_name_parts[1],)
+        res = graphql_api(body)
+        r = res["data"]["repository"]
+        response['content'] = r['content'] if r else ""
+        defaultBranchRef = r['defaultBranchRef']['name']
+        response['defaultBranchRef'] = r['defaultBranchRef']['name'] if r else "main"
         commits = []
         PAGE_SIZE = 100
         cursor = None
         hasNextPage = True
         while hasNextPage:
-            # print(len(response.keys()), cursor)
             body = """
             {
                 repository(owner: "%s", name: "%s") {
-                    content: object(expression: "master:README.md") {
-                        ... on Blob {
-                            text
-                        }
-                    }
-                    info: ref(qualifiedName: "master") {
+                    info: ref(qualifiedName: "%s") {
                         target {
                             ... on Commit {
                                 history(path: "README.md", first: %d %s ) {
@@ -1066,44 +1077,37 @@ def get_README_history(repo_name, cut_date="2000"):
                 }
             }""" % (repo_name_parts[0],
                     repo_name_parts[1],
+                    defaultBranchRef,
                     PAGE_SIZE,
                     ", after: \"{}\"".format(cursor) if cursor else "",
                     )
             res = graphql_api(body)
-            # print (res)
             if "errors" in res:
                 print(json.dumps(res["errors"], indent=2))
-            try:
-                r = res["data"]["repository"]
-                if r:
-                    content = r['content']['text']
-                    history = r['info']['target']['history']
-                    nodes = history['nodes']
-                    if content not in response:
-                        response['content'] = content
+            r = res["data"]["repository"]['info']
+            if r:
+                history = r['target']['history']
+                nodes = history['nodes']
+                for n in nodes:
+                    committedDate = format_date_utc_iso(n["committedDate"])
+                    if committedDate < cut_date:
+                        break
+                    url = n['url']
+                    commits.append({
+                        'committeDate': committedDate,
+                        'login': n['author']['user']['login'] if n['author']['user'] else None,
+                        'additions': n['additions'],
+                        'deletions': n['deletions'],
+                        'url': n['url']
+                    })
+                    # todo recursively make a post request to get the history of each commit url
 
-                    for n in nodes:
-                        committedDate = format_date_utc_iso(n["committedDate"])
-                        if committedDate < cut_date:
-                            break
-                        url = n['url']
-                        commits.append({
-                            'committeDate': committedDate,
-                            'login': n['author']['user']['login'] if n['author']['user'] else None,
-                            'additions': n['additions'],
-                            'deletions': n['deletions'],
-                            'url': n['url']
-                        })
-                        #todo recursively make a post request to get the history of each commit url
-
-                    page = history["pageInfo"]
-                    cursor = page["endCursor"]
-                    hasNextPage = page["hasNextPage"]
-
-                response['history'] = commits
-            except Exception as e:
-                print(repo_name, "error \n", str(e))
-                raise e
+                page = history["pageInfo"]
+                cursor = page["endCursor"]
+                hasNextPage = page["hasNextPage"]
+            else:  # try it from default branch
+                break
+        response['history'] = commits
         print("README history", len(response))
         return response
 

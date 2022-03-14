@@ -12,7 +12,7 @@ def main(args):
     try:
         events = args[0].split(",")
     except:
-        events = [ "commits", "issues", "forks", "watchers", "stars" ]
+        events = [ "commits", "issues", "forks", "watchers", "stars", "readme"]
 
     try:
         limit = int(args[1])
@@ -41,6 +41,8 @@ def main(args):
         get_forks_events(limit, skip, sort, cutoff=since)
     if "watchers" in events:
         get_watchers_events(limit, skip, sort, cutoff=since)
+    if "readme" in events:
+        get_README_history(limit, skip, sort, cutoff=since)
     if "stars" in events:
         get_stars_events(limit, skip, sort, cutoff=since)
 
@@ -136,6 +138,30 @@ def get_watchers_events(limit, skip, sort, cutoff):
             save_doc(repo_id, {
                 "watchers_events_id": repo_id + "/watchers",
                 "watchers_events": len(watchers)})
+        except Exception as e:
+            print(str(e))
+            pass
+
+
+def get_README_history(limit, skip, sort, cutoff):
+    repos = [r for r in db.get_query_result({
+        "type": "Repo",
+        "readme_events": {"$exists": False},
+    }, ["_id"], limit=limit, skip=skip, raw_result=True)["docs"]]
+
+    print("repos", len(repos))
+
+    for repo in repos:
+        print("\n", repo)
+        repo_id = repo["_id"]
+        try:
+            readme = gh.get_README_history(repo_id, cutoff)
+            print(readme)
+            readme = [] if readme is None else readme
+            save_doc(repo_id + "/readme", {"type": "RepoReadme", "repo_id": repo_id, "readme": readme})
+            save_doc(repo_id, {
+                "readme_events_id": repo_id + "/readme",
+                "readme_events": len(readme)})
         except Exception as e:
             print(str(e))
             pass
