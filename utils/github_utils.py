@@ -1034,6 +1034,7 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
                         content: object(expression: "%s:README.md") {
                             ... on Blob {
                                 text
+                                byteSize
                             }
                         }
                          defaultBranchRef {
@@ -1043,7 +1044,7 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
                 }""" % (repo_name_parts[0], repo_name_parts[1], tag)
             res = graphql_api(body)
             r = res["data"]["repository"]
-            content[tag] = r['content']['text']
+            content[tag] = {'text': r['content']['text'], 'byteSize': r['content']['byteSize']}
             defaultBranchRef = r['defaultBranchRef']['name']
 
         response['content'] = content

@@ -10,6 +10,7 @@ from utils.cloudant_utils import cloudant_db as db, save_doc
 def main(args):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
+        # "_id":"10up/classifai",
         "releases.0": {"$exists": True},
     }, ["_id", "releases", "stars", "watchers", "commits_count", "forks_count", "issues_count"], limit=1, raw_result=True)["docs"]]
 
@@ -40,7 +41,8 @@ def main(args):
 
             updateRelease(prev_release, curr_release, r, commits_post_cutoff, commits_pre_cutoff,  "commits")
             updateRelease(prev_release, curr_release, r, issues_post_cutoff, issues_pre_cutoff,  "issues")
-            r['readme'] = readme_dict[r['release_tag']]
+            r['readme'] = readme_dict[r['release_tag']]['text']
+            r['readme_size'] = readme_dict[r['release_tag']]['byteSize']
         # print_json(releases)
         save_doc(repo["_id"] + "/release", {"type": "release", "releases": releases})
 
