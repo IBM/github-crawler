@@ -147,9 +147,9 @@ def get_README_history(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
         "readme_events": {"$exists": False},
-    }, ["_id"], limit=limit, skip=skip, raw_result=True)["docs"]]
+    }, ["_id", "releases"], limit=limit, skip=skip, raw_result=True)["docs"]]
 
-    print("repos", len(repos))
+    # print("repos", len(repos))
     for repo in repos:
         print("\n", repo)
         repo_id = repo["_id"]
@@ -157,7 +157,7 @@ def get_README_history(limit, skip, sort, cutoff):
         # print("# of releases", len(releases))
         try:
             readme = gh.get_README_history(repo_id, releases, cutoff)
-            print(readme)
+            # print(readme)
             readme = [] if readme is None else readme
             save_doc(repo_id + "/readme", {"type": "RepoReadme", "repo_id": repo_id, "readme": readme})
             save_doc(repo_id, {

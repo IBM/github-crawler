@@ -11,7 +11,6 @@ def main(args):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
         "releases.0": {"$exists": True},
-        "_id": "10up/classifai",
     }, ["_id", "releases", "stars", "watchers", "commits_count", "forks_count", "issues_count"], limit=1, raw_result=True)["docs"]]
 
     releases = [{"repo": r["_id"], "release_tag": re["tag"], "release_date": re["published_at"], "downloads": re["download"],
