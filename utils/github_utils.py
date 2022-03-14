@@ -1105,8 +1105,6 @@ def get_README_history(repo_name, cut_date="2000"):
                 page = history["pageInfo"]
                 cursor = page["endCursor"]
                 hasNextPage = page["hasNextPage"]
-            else:  # try it from default branch
-                break
         response['history'] = commits
         print("README history", len(response))
         return response
