@@ -12,7 +12,7 @@ def main(args):
         "type": "Repo",
         # "_id":"10up/classifai",
         "releases.0": {"$exists": True},
-    }, ["_id", "releases", "stars", "watchers", "commits_count", "forks_count", "issues_count"], limit=1, raw_result=True)["docs"]]
+    }, ["_id", "releases", "stars", "watchers", "commits_count", "forks_count", "issues_count", "contributor_statistics"], limit=1, raw_result=True)["docs"]]
 
     releases = [{"repo": r["_id"], "release_tag": re["tag"], "release_date": re["published_at"], "downloads": re["download"],
                  "stars": 0, "watchers":0, "forks":0, "commits": 0, "issues":0} for r in repos for re in r["releases"] ][::-1]
@@ -25,6 +25,7 @@ def main(args):
         total_commits, commits_post_cutoff, commits_pre_cutoff = getCommits(repo)
         total_issues, issues_post_cutoff, issues_pre_cutoff = getIssues(repo)
         readme_dict = getReadmeContent(repo)
+        contributor_statistics = repo["contributor_statistics"]
 
         #Tested for issues, stars, forks
         for i in range(len(releases)):
@@ -43,8 +44,29 @@ def main(args):
             updateRelease(prev_release, curr_release, r, issues_post_cutoff, issues_pre_cutoff,  "issues")
             r['readme'] = readme_dict[r['release_tag']]['text']
             r['readme_size'] = readme_dict[r['release_tag']]['byteSize']
+
+            addContributorsInRelease(r, contributor_statistics)
         # print_json(releases)
         save_doc(repo["_id"] + "/release", {"type": "release", "releases": releases})
+
+def addContributorsInRelease(release, contributor_statistics):
+    a = 0
+    d = 0
+    c_total = 0
+    contributors = []
+    for c in contributor_statistics:
+        author = c['author_id']
+        total = c['total']
+        for w in c['weeks']:
+            if w['w'] < release['release_date']:
+                a += w["a"]
+                d += w["d"]
+                c_total += w["c"]
+                contributors.append(author)
+    release["added"] = a
+    release["deleted"] = d
+    release["changed"] = c_total #todo confirm the field
+    release["contributors"] = len(set(contributors)) #todo use contributors login name
 
 
 def updateRelease(R1, R2, release, events, initial_count, field):
