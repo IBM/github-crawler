@@ -3,45 +3,63 @@
 # SPDX-License-Identifier: Apache2.0
 #
 import sys
-from utils.cloudant_utils import cloudant_db as db
 from utils import print_json
+from utils.cloudant_utils import cloudant_db as db, save_doc
 
 
 def main(args):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        "releases.10": {"$exists": True}
+        "releases.0": {"$exists": True},
+        "_id": "10up/classifai",
     }, ["_id", "releases", "stars", "watchers", "commits_count", "forks_count", "issues_count"], limit=1, raw_result=True)["docs"]]
 
-    releases = [{"repo": r["_id"], "release_tag": re["tag"], "release_date": re["published_at"],
+    releases = [{"repo": r["_id"], "release_tag": re["tag"], "release_date": re["published_at"], "downloads": re["download"],
                  "stars": 0, "watchers":0, "forks":0, "commits": 0, "issues":0} for r in repos for re in r["releases"] ][::-1]
     # print_json(releases)
 
-    total_stars, stars_post_cutoff, stars_pre_cutoff = getStars(repos[0])
-    total_watchers, watchers_post_cutoff, watchers_pre_cutoff = getWatchers(repos[0])
-    total_forks, forks_post_cutoff, forks_pre_cutoff = getForks(repos[0])
-    total_commits, commits_post_cutoff, commits_pre_cutoff = getCommits(repos[0])
-    total_issues, issues_post_cutoff, issues_pre_cutoff = getIssues(repos[0])
+    for repo in repos:
+        total_stars, stars_post_cutoff, stars_pre_cutoff = getStars(repo)
+        total_watchers, watchers_post_cutoff, watchers_pre_cutoff = getWatchers(repo)
+        total_forks, forks_post_cutoff, forks_pre_cutoff = getForks(repo)
+        total_commits, commits_post_cutoff, commits_pre_cutoff = getCommits(repo)
+        total_issues, issues_post_cutoff, issues_pre_cutoff = getIssues(repo)
+        readme_dict = getReadmeContent(repo)
 
-    for release in releases:
-        updateRelease(release, stars_post_cutoff, stars_pre_cutoff,  "stars")
-        updateRelease(release, watchers_post_cutoff, watchers_pre_cutoff,  "watchers")
-        updateRelease(release, forks_post_cutoff, forks_pre_cutoff,  "forks")
-        updateRelease(release, commits_post_cutoff, commits_pre_cutoff,  "commits")
-        updateRelease(release, issues_post_cutoff, issues_pre_cutoff,  "issues")
-    print_json(releases)
+        #Tested for issues, stars, forks
+        for i in range(len(releases)):
+            # print("Repo:%s \t Tag: %s" % (repo['_id'],  releases[i]['release_tag']))
+
+            r = releases[i]
+            next_release = "2022-03-08" if i+1 == len(releases) else releases[i+1]["release_date"]
+            prev_release = "2018-01-01" if i == 1 else releases[i-1]["release_date"]
+            curr_release = r["release_date"]
+
+            updateRelease(curr_release,  next_release, r, stars_post_cutoff, stars_pre_cutoff,  "stars")
+            updateRelease(curr_release,  next_release, r, watchers_post_cutoff, watchers_pre_cutoff,  "watchers")
+            updateRelease(curr_release,  next_release, r, forks_post_cutoff, forks_pre_cutoff,  "forks")
+
+            updateRelease(prev_release, curr_release, r, commits_post_cutoff, commits_pre_cutoff,  "commits")
+            updateRelease(prev_release, curr_release, r, issues_post_cutoff, issues_pre_cutoff,  "issues")
+            r['readme'] = readme_dict[r['release_tag']]
+        # print_json(releases)
+        save_doc(repo["_id"] + "/release", {"type": "release", "releases": releases})
 
 
-def updateRelease(release, events, initial_count, field):
-    # events = []
+def updateRelease(R1, R2, release, events, initial_count, field):
+    count = 0
     for e in events:
-        if e < release["release_date"]:
-            initial_count += 1
-            # events.append(e)
-        else:
-            release[field] = initial_count
-            # release["new_events"] = len(events)
-            # release["events"] = events
+        if R1 < e < R2:
+            count += 1
+        if e > R2:
+            break
+
+    release[field] = count
+
+
+def getReadmeContent(repo):
+    read_me_content = db[repo["_id"] + "/readme"]["readme"]['content']
+    return read_me_content
 
 
 def getStars(repo):
@@ -56,7 +74,6 @@ def getStars(repo):
 
 def getWatchers(repo):
     watchers_post_cutoff = list(db[repo["_id"] + "/watchers"]["watchers"].values())[::-1]
-    print(repo)
     total_watchers = repo["watchers"]
     watchers_pre_cutoff = total_watchers - len(watchers_post_cutoff)
     # print_json(watchers_post_cutoff)

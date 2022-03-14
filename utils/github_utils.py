@@ -1018,29 +1018,37 @@ def get_watcher_events(repo_name, cut_date="2000"):
         raise e
 
 
-def get_README_history(repo_name, cut_date="2000"):
+def get_README_history(repo_name, releases,  cut_date="2000"):
     print(repo_name, " get README history ")
     repo_name_parts = repo_name.split("/")
+    response = {}
+    tags = ["HEAD"] if releases is None else [r['tag'] for r in releases]
+    defaultBranchRef = "main"
+    print(tags)
     try:
-        response = {}
-        body = """
-            {
-                repository(owner: "%s", name: "%s") {
-                    content: object(expression: "HEAD:README.md") {
-                        ... on Blob {
-                            text
+        content = {}
+        for tag in tags:
+            body = """
+                {
+                    repository(owner: "%s", name: "%s") {
+                        content: object(expression: "%s:README.md") {
+                            ... on Blob {
+                                text
+                            }
+                        }
+                         defaultBranchRef {
+                          name
                         }
                     }
-                     defaultBranchRef {
-                      name
-                    }
-                }
-            }""" % (repo_name_parts[0], repo_name_parts[1],)
-        res = graphql_api(body)
-        r = res["data"]["repository"]
-        response['content'] = r['content'] if r else ""
-        defaultBranchRef = r['defaultBranchRef']['name']
-        response['defaultBranchRef'] = r['defaultBranchRef']['name'] if r else "main"
+                }""" % (repo_name_parts[0], repo_name_parts[1], tag)
+            res = graphql_api(body)
+            r = res["data"]["repository"]
+            content[tag] = r['content']['text']
+            defaultBranchRef = r['defaultBranchRef']['name']
+
+        response['content'] = content
+        response['defaultBranchRef'] = defaultBranchRef
+
         commits = []
         PAGE_SIZE = 100
         cursor = None
