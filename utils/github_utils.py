@@ -614,8 +614,7 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
                 my_repo_doc.put_attachment("CONTRIBUTING.md", "text/markdown; charset=utf-8", requests.request("GET", u).text.encode('utf-8'))
             except:
                 print("error downloading CONTRIBUTING.md")
-    print("------->", metadata)
-    # my_repo_doc = save_doc(repo.full_name, metadata)
+    my_repo_doc = save_doc(repo.full_name, metadata)
 
     print(15 * "-", "get owner")
     get_user(repo.owner, overwrite, details=user_details)
