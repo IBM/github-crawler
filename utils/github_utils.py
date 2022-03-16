@@ -614,7 +614,8 @@ def extract_metadata(repo, current_commits=[], overwrite=False, get_users=True, 
                 my_repo_doc.put_attachment("CONTRIBUTING.md", "text/markdown; charset=utf-8", requests.request("GET", u).text.encode('utf-8'))
             except:
                 print("error downloading CONTRIBUTING.md")
-    my_repo_doc = save_doc(repo.full_name, metadata)
+    print("------->", metadata)
+    # my_repo_doc = save_doc(repo.full_name, metadata)
 
     print(15 * "-", "get owner")
     get_user(repo.owner, overwrite, details=user_details)
@@ -867,6 +868,7 @@ def get_issues_history(repo_name, cut_date="2000"):
                             }
                             closedAt
                             title
+                            closed
                         }
                     }
                 }
@@ -886,9 +888,10 @@ def get_issues_history(repo_name, cut_date="2000"):
                         if createdAt < cut_date:
                             break
                         title = r["title"]
+                        closed = r["closed"]
                         issuer = r["author"]["login"] if r["author"] else None # TODO confirm if want to add none author in db
                         closedAt = format_date_utc_iso(r["closedAt"]) if r["closedAt"] else None
-                        issue = {"title": title, "issuer": issuer,  "closedAt": closedAt, "createdAt": createdAt}
+                        issue = {"title": title, "issuer": issuer,  "closedAt": closedAt, "createdAt": createdAt, "closed": closed}
                         issues.append(issue)
                 cursor = res["data"]["repository"]["issues"]["pageInfo"]["endCursor"]
                 hasNextPage = res["data"]["repository"]["issues"]["pageInfo"]["hasNextPage"]
