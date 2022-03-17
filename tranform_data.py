@@ -8,10 +8,11 @@ from utils.cloudant_utils import cloudant_db as db, save_doc
 
 
 def main(args):
+    fields = ["_id", "releases", "stars", "watchers", "commits_count", "forks_count", "issues_count", "contributor_statistics"]
     repos = [r for r in db.get_query_result({
         "type": "Repo",
         "releases.0": {"$exists": True},
-    }, ["_id", "releases", "stars", "watchers", "commits_count", "forks_count", "issues_count", "contributor_statistics"], limit=1, raw_result=True)["docs"]]
+    }, fields, limit=1, raw_result=True)["docs"]]
 
     releases = [{"repo": r["_id"], "release_tag": re["tag"], "release_date": re["published_at"], "downloads": re["download"],
                  "stars": 0, "watchers":0, "forks":0, "commits": 0, "issues":0} for r in repos for re in r["releases"] ][::-1]
@@ -29,11 +30,13 @@ def main(args):
         #Tested for issues, stars, forks
         for i in range(len(releases)):
             # print("Repo:%s \t Tag: %s" % (repo['_id'],  releases[i]['release_tag']))
-
             r = releases[i]
-            next_release = "2022-03-08" if i+1 == len(releases) else releases[i+1]["release_date"]
-            prev_release = "2018-01-01" if i == 1 else releases[i-1]["release_date"]
             curr_release = r["release_date"]
+            if curr_release < "2020-01-01":
+                continue
+            next_release = "2022-03-16" if i+1 == len(releases) else releases[i+1]["release_date"]
+            prev_release = "2018-01-01" if i == 0 else releases[i-1]["release_date"]
+            # print(i, prev_release, curr_release, next_release)
 
             updateRelease(curr_release,  next_release, r, stars_post_cutoff, stars_pre_cutoff,  "stars")
             updateRelease(curr_release,  next_release, r, watchers_post_cutoff, watchers_pre_cutoff,  "watchers")
