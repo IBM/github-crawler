@@ -50,14 +50,14 @@ def main(args):
 def get_commits_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        "commits_events": {"$exists": False},
+        # "commits_events": {"$exists": False},
         "commits_count": {"$gt": 0}
     }, ["_id", "commits_count"], limit=limit, skip=skip, raw_result=True, sort=[{'commits_count': sort}])["docs"]]
 
     print("repos", len(repos))
 
     for repo in repos:
-        print("\n", repo)
+        # print("\n", repo)
         repo_id = repo["_id"]
         try:
             commits = gh.get_commit_history(repo_id, cutoff)
@@ -73,14 +73,14 @@ def get_commits_events(limit, skip, sort, cutoff):
 def get_issues_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        "issues_events": {"$exists": False},
+        # "issues_events": {"$exists": False},
         "issues_count": {"$gt": 0}
     }, ["_id", "issues_count"], limit=limit, skip=skip, raw_result=True, sort=[{'issues_count': sort}])["docs"]]
 
     print("repos", len(repos))
 
     for repo in repos:
-        print("\n", repo)
+        # print("\n", repo)
         repo_id = repo["_id"]
         try:
             issues = gh.get_issues_history(repo_id, cutoff)
@@ -96,18 +96,18 @@ def get_issues_events(limit, skip, sort, cutoff):
 def get_forks_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        "forks_events": {"$exists": False},
+        # "forks_events": {"$exists": False},
         "forks_count": {"$gt": 0}
     }, ["_id", "forks_count"], limit=limit, skip=skip, raw_result=True, sort=[{'forks_count': sort}])["docs"]]
 
     print("repos", len(repos))
 
     for repo in repos:
-        print("\n", repo)
+        # print("\n", repo)
         repo_id = repo["_id"]
         try:
             forks = gh.get_fork_history(repo_id, cutoff)
-            print (forks)
+            # print (forks)
             forks = [] if forks is None else forks
             save_doc(repo_id + "/forks", {"type": "RepoForks", "repo_id": repo_id, "forks": forks})
             save_doc(repo_id, {
@@ -120,19 +120,19 @@ def get_forks_events(limit, skip, sort, cutoff):
 def get_watchers_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        "watchers_events": {"$exists": False},
+        # "watchers_events": {"$exists": False},
         "watchers": {"$gt": 0}
     }, ["_id", "watchers"], limit=limit, skip=skip, raw_result=True, sort=[{'watchers': sort}])["docs"]]
 
     print("repos", len(repos))
 
     for repo in repos:
-        print("\n", repo)
+        # print("\n", repo)
         repo_id = repo["_id"]
         try:
             print("repo idddd>>>>>", repo_id)
             watchers = gh.get_watcher_events(repo_id, cutoff)
-            print (watchers)
+            # print (watchers)
             watchers = [] if watchers is None else watchers
             save_doc(repo_id + "/watchers", {"type": "RepoWatchers", "repo_id": repo_id, "watchers": watchers})
             save_doc(repo_id, {
@@ -146,7 +146,7 @@ def get_watchers_events(limit, skip, sort, cutoff):
 def get_README_history(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        "readme_events": {"$exists": False},
+        # "readme_events": {"$exists": False},
     }, ["_id", "releases"], limit=limit, skip=skip, raw_result=True)["docs"]]
 
     # print("repos", len(repos))
@@ -170,19 +170,19 @@ def get_README_history(limit, skip, sort, cutoff):
 def get_stars_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        "stargazers_events": {"$exists": False},
+        # "stargazers_events": {"$exists": False},
         "stars": {"$gt": 0}
     }, ["_id", "stars"], limit=limit, skip=skip, raw_result=True, sort=[{'stars': sort}])["docs"]]
 
-    print("repos", len(repos))
+    # print("repos", len(repos))
 
     for repo in repos:
         print("\n", repo)
         repo_id = repo["_id"]
         try:
-            print("repo idddd>>>>>", repo_id)
+            # print("repo idddd>>>>>", repo_id)
             stargazers = gh.get_starred_events(repo_id, cutoff)
-            print (stargazers)
+            # print (stargazers)
             stargazers = [] if stargazers is None else stargazers
             save_doc(repo_id + "/stargazers", {"type": "RepoStargazers", "repo_id": repo_id, "stargazers": stargazers})
             save_doc(repo_id, {
