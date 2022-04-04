@@ -15,7 +15,7 @@ results = db.get_view_result(
     page_size=100000,
     skip=0)
 valid_repos = [r['id'] for r in results]
-
+print("\n", valid_repos, "\n")
 
 def main(args):
 
@@ -161,7 +161,7 @@ def get_README_history(limit, skip, sort, cutoff):
     }, ["_id", "releases"], limit=limit, skip=skip, raw_result=True)["docs"]]
     repos = [r for r in repos if r in valid_repos]
 
-    # print("repos", len(repos))
+    print("repos", len(repos))
     for repo in repos:
         print("\n", repo)
         repo_id = repo["_id"]
@@ -187,7 +187,7 @@ def get_stars_events(limit, skip, sort, cutoff):
     }, ["_id", "stars"], limit=limit, skip=skip, raw_result=True, sort=[{'stars': sort}])["docs"]]
     repos = [r for r in repos if r in valid_repos]
 
-    # print("repos", len(repos))
+    print("repos", len(repos))
 
     for repo in repos:
         print("\n", repo)
