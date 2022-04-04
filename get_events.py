@@ -182,7 +182,7 @@ def get_README_history(limit, skip, sort, cutoff):
 def get_stars_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        # "stargazers_events": {"$exists": False},
+        "stargazers_events": {"$exists": False},
         "stars": {"$gt": 0}
     }, ["_id", "stars"], limit=limit, skip=skip, raw_result=True, sort=[{'stars': sort}])["docs"]]
     repos = [r for r in repos if r not in valid_repos]
