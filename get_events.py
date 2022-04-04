@@ -22,7 +22,7 @@ def main(args):
     try:
         events = args[0].split(",")
     except:
-        events = ["issues", "forks", "watchers", "stars", "readme"]
+        events = ["commits", "issues", "forks", "watchers", "stars", "readme"]
 
     try:
         limit = int(args[1])
