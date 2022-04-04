@@ -6,13 +6,23 @@ import sys
 import utils.github_utils as gh
 from utils.cloudant_utils import cloudant_db as db, save_doc
 
+results = db.get_view_result(
+    '_design/types',
+    "has-releases",
+    key=True,
+    reduce=False,
+    descending=False,
+    page_size=100000,
+    skip=0)
+valid_repos = [r['id'] for r in results]
+
 
 def main(args):
 
     try:
         events = args[0].split(",")
     except:
-        events = [ "commits", "issues", "forks", "watchers", "stars", "readme"]
+        events = ["issues", "forks", "watchers", "stars", "readme"]
 
     try:
         limit = int(args[1])
@@ -50,12 +60,12 @@ def main(args):
 def get_commits_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        # "commits_events": {"$exists": False},
+        "commits_events": {"$exists": False},
         "commits_count": {"$gt": 0}
     }, ["_id", "commits_count"], limit=limit, skip=skip, raw_result=True, sort=[{'commits_count': sort}])["docs"]]
 
+    repos = [r for r in repos if r not in valid_repos]
     print("repos", len(repos))
-
     for repo in repos:
         # print("\n", repo)
         repo_id = repo["_id"]
@@ -73,10 +83,11 @@ def get_commits_events(limit, skip, sort, cutoff):
 def get_issues_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        # "issues_events": {"$exists": False},
+        "issues_events": {"$exists": False},
         "issues_count": {"$gt": 0}
     }, ["_id", "issues_count"], limit=limit, skip=skip, raw_result=True, sort=[{'issues_count': sort}])["docs"]]
 
+    repos = [r for r in repos if r not in valid_repos]
     print("repos", len(repos))
 
     for repo in repos:
@@ -96,10 +107,10 @@ def get_issues_events(limit, skip, sort, cutoff):
 def get_forks_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        # "forks_events": {"$exists": False},
+        "forks_events": {"$exists": False},
         "forks_count": {"$gt": 0}
     }, ["_id", "forks_count"], limit=limit, skip=skip, raw_result=True, sort=[{'forks_count': sort}])["docs"]]
-
+    repos = [r for r in repos if r not in valid_repos]
     print("repos", len(repos))
 
     for repo in repos:
@@ -120,10 +131,10 @@ def get_forks_events(limit, skip, sort, cutoff):
 def get_watchers_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        # "watchers_events": {"$exists": False},
+        "watchers_events": {"$exists": False},
         "watchers": {"$gt": 0}
     }, ["_id", "watchers"], limit=limit, skip=skip, raw_result=True, sort=[{'watchers': sort}])["docs"]]
-
+    repos = [r for r in repos if r not in valid_repos]
     print("repos", len(repos))
 
     for repo in repos:
@@ -146,8 +157,9 @@ def get_watchers_events(limit, skip, sort, cutoff):
 def get_README_history(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        # "readme_events": {"$exists": False},
+        "readme_events": {"$exists": False},
     }, ["_id", "releases"], limit=limit, skip=skip, raw_result=True)["docs"]]
+    repos = [r for r in repos if r not in valid_repos]
 
     # print("repos", len(repos))
     for repo in repos:
@@ -173,6 +185,7 @@ def get_stars_events(limit, skip, sort, cutoff):
         # "stargazers_events": {"$exists": False},
         "stars": {"$gt": 0}
     }, ["_id", "stars"], limit=limit, skip=skip, raw_result=True, sort=[{'stars': sort}])["docs"]]
+    repos = [r for r in repos if r not in valid_repos]
 
     # print("repos", len(repos))
 
@@ -191,6 +204,7 @@ def get_stars_events(limit, skip, sort, cutoff):
         except Exception as e:
             print(str(e))
             pass
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

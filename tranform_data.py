@@ -5,6 +5,7 @@
 import sys
 from utils import print_json
 from utils.cloudant_utils import cloudant_db as db, save_doc
+from datetime import date
 
 
 def main(args):
@@ -34,7 +35,7 @@ def main(args):
             curr_release = r["release_date"]
             if curr_release < "2020-01-01":
                 continue
-            next_release = "2022-03-16" if i+1 == len(releases) else releases[i+1]["release_date"]
+            next_release = date.today() if i+1 == len(releases) else releases[i+1]["release_date"]
             prev_release = "2018-01-01" if i == 0 else releases[i-1]["release_date"]
             # print(i, prev_release, curr_release, next_release)
 

@@ -1056,7 +1056,9 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
         PAGE_SIZE = 100
         cursor = None
         hasNextPage = True
+        page = 1
         while hasNextPage:
+            print("PAGE: ", page)
             body = """
             {
                 repository(owner: "%s", name: "%s") {
@@ -1116,6 +1118,7 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
                 page = history["pageInfo"]
                 cursor = page["endCursor"]
                 hasNextPage = page["hasNextPage"]
+                page = page + 1
         response['history'] = commits
         print("README history", len(response))
         return response
