@@ -64,7 +64,7 @@ def get_commits_events(limit, skip, sort, cutoff):
         "commits_count": {"$gt": 0}
     }, ["_id", "commits_count"], limit=limit, skip=skip, raw_result=True, sort=[{'commits_count': sort}])["docs"]]
 
-    repos = [r for r in repos if r not in valid_repos]
+    repos = [r for r in repos if r in valid_repos]
     print("repos", len(repos))
     for repo in repos:
         # print("\n", repo)
@@ -87,7 +87,7 @@ def get_issues_events(limit, skip, sort, cutoff):
         "issues_count": {"$gt": 0}
     }, ["_id", "issues_count"], limit=limit, skip=skip, raw_result=True, sort=[{'issues_count': sort}])["docs"]]
 
-    repos = [r for r in repos if r not in valid_repos]
+    repos = [r for r in repos if r in valid_repos]
     print("repos", len(repos))
 
     for repo in repos:
@@ -110,7 +110,7 @@ def get_forks_events(limit, skip, sort, cutoff):
         "forks_events": {"$exists": False},
         "forks_count": {"$gt": 0}
     }, ["_id", "forks_count"], limit=limit, skip=skip, raw_result=True, sort=[{'forks_count': sort}])["docs"]]
-    repos = [r for r in repos if r not in valid_repos]
+    repos = [r for r in repos if r in valid_repos]
     print("repos", len(repos))
 
     for repo in repos:
@@ -134,7 +134,7 @@ def get_watchers_events(limit, skip, sort, cutoff):
         "watchers_events": {"$exists": False},
         "watchers": {"$gt": 0}
     }, ["_id", "watchers"], limit=limit, skip=skip, raw_result=True, sort=[{'watchers': sort}])["docs"]]
-    repos = [r for r in repos if r not in valid_repos]
+    repos = [r for r in repos if r in valid_repos]
     print("repos", len(repos))
 
     for repo in repos:
@@ -159,7 +159,7 @@ def get_README_history(limit, skip, sort, cutoff):
         "type": "Repo",
         "readme_events": {"$exists": False},
     }, ["_id", "releases"], limit=limit, skip=skip, raw_result=True)["docs"]]
-    repos = [r for r in repos if r not in valid_repos]
+    repos = [r for r in repos if r in valid_repos]
 
     # print("repos", len(repos))
     for repo in repos:
@@ -185,7 +185,7 @@ def get_stars_events(limit, skip, sort, cutoff):
         "stargazers_events": {"$exists": False},
         "stars": {"$gt": 0}
     }, ["_id", "stars"], limit=limit, skip=skip, raw_result=True, sort=[{'stars': sort}])["docs"]]
-    repos = [r for r in repos if r not in valid_repos]
+    repos = [r for r in repos if r in valid_repos]
 
     # print("repos", len(repos))
 
