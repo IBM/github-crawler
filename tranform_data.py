@@ -13,44 +13,57 @@ def main(args):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
         "releases.0": {"$exists": True},
-    }, fields, limit=1, raw_result=True)["docs"]]
+        "release_events": {"$exists": False},
+    }, fields, limit=10000, raw_result=True)["docs"]]
+
+    filterList = ["ARM-software/ComputeLibrary", "Accenture/AmpliGraph"]
+    repos = [r for r in repos if r["_id"] not in filterList]
 
     releases = [{"repo": r["_id"], "release_tag": re["tag"], "release_date": re["published_at"], "downloads": re["download"],
                  "stars": 0, "watchers":0, "forks":0, "commits": 0, "issues":0} for r in repos for re in r["releases"] ][::-1]
-    # print_json(releases)
+    print_json(len(releases))
+    # print(releases)
 
     for repo in repos:
-        total_stars, stars_post_cutoff, stars_pre_cutoff = getStars(repo)
-        total_watchers, watchers_post_cutoff, watchers_pre_cutoff = getWatchers(repo)
-        total_forks, forks_post_cutoff, forks_pre_cutoff = getForks(repo)
-        total_commits, commits_post_cutoff, commits_pre_cutoff = getCommits(repo)
-        total_issues, issues_post_cutoff, issues_pre_cutoff, issues = getIssues(repo)
-        readme_dict = getReadmeContent(repo)
-        contributor_statistics = repo["contributor_statistics"]
+        try:
+            total_stars, stars_post_cutoff, stars_pre_cutoff = getStars(repo)
+            total_watchers, watchers_post_cutoff, watchers_pre_cutoff = getWatchers(repo)
+            total_forks, forks_post_cutoff, forks_pre_cutoff = getForks(repo)
+            total_commits, commits_post_cutoff, commits_pre_cutoff = getCommits(repo)
+            total_issues, issues_post_cutoff, issues_pre_cutoff, issues = getIssues(repo)
+            readme_dict = getReadmeContent(repo)
+            contributor_statistics = repo["contributor_statistics"]
+            repo_releases = [r for r in releases if r['repo'] == repo['_id']]
+            # print(repo_releases)
+            # Tested for issues, stars, forks
+            for i in range(len(repo_releases)):
+                # print("Repo:%s \t Tag: %s" % (repo['_id'],  repo_releases[i]['release_tag']))
+                r = repo_releases[i]
+                curr_release = r["release_date"]
+                if curr_release < "2020-01-01":
+                    continue
+                next_release = str(date.today()) if i+1 == len(repo_releases) else repo_releases[i+1]["release_date"]
+                prev_release = "2018-01-01" if i == 0 else repo_releases[i-1]["release_date"]
+                # print(i, prev_release, curr_release, next_release)
 
-        #Tested for issues, stars, forks
-        for i in range(len(releases)):
-            # print("Repo:%s \t Tag: %s" % (repo['_id'],  releases[i]['release_tag']))
-            r = releases[i]
-            curr_release = r["release_date"]
-            if curr_release < "2020-01-01":
-                continue
-            next_release = date.today() if i+1 == len(releases) else releases[i+1]["release_date"]
-            prev_release = "2018-01-01" if i == 0 else releases[i-1]["release_date"]
-            # print(i, prev_release, curr_release, next_release)
+                updateRelease(curr_release,  next_release, r, stars_post_cutoff, stars_pre_cutoff,  "stars")
+                updateRelease(curr_release,  next_release, r, watchers_post_cutoff, watchers_pre_cutoff,  "watchers")
+                updateRelease(curr_release,  next_release, r, forks_post_cutoff, forks_pre_cutoff,  "forks")
 
-            updateRelease(curr_release,  next_release, r, stars_post_cutoff, stars_pre_cutoff,  "stars")
-            updateRelease(curr_release,  next_release, r, watchers_post_cutoff, watchers_pre_cutoff,  "watchers")
-            updateRelease(curr_release,  next_release, r, forks_post_cutoff, forks_pre_cutoff,  "forks")
+                updateRelease(prev_release, curr_release, r, commits_post_cutoff, commits_pre_cutoff,  "commits")
+                updateRelease(prev_release, curr_release, r, issues_post_cutoff, issues_pre_cutoff,  "issues", additional_dict=issues)
+                r['readme'] = readme_dict[r['release_tag']]['text']
+                r['readme_size'] = readme_dict[r['release_tag']]['byteSize']
 
-            updateRelease(prev_release, curr_release, r, commits_post_cutoff, commits_pre_cutoff,  "commits")
-            updateRelease(prev_release, curr_release, r, issues_post_cutoff, issues_pre_cutoff,  "issues", additional_dict=issues)
-            r['readme'] = readme_dict[r['release_tag']]['text']
-            r['readme_size'] = readme_dict[r['release_tag']]['byteSize']
-
-            addContributorsInRelease(r, contributor_statistics)
-        print_json(releases)
-        save_doc(repo["_id"] + "/release", {"type": "release", "releases": releases})
+                addContributorsInRelease(r, contributor_statistics)
+            print_json(repo_releases)
+            save_doc(repo["_id"] + "/release", {"type": "release", "releases": repo_releases})
+            save_doc(repo["_id"], {
+                "release_events_id": repo["_id"] + "/release",
+                "release_events": len(repo_releases)})
+        except Exception as e:
+            print(str(e))
+            pass
 
 
 def addContributorsInRelease(release, contributor_statistics):
