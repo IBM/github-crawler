@@ -1025,7 +1025,7 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
     repo_name_parts = repo_name.split("/")
     response = {}
     tags = ["HEAD"] if releases is None else [r['tag'] for r in releases]
-    defaultBranchRef = "main"
+    defaultBranchRef = "master"
     # print(tags)
     try:
         content = {}
@@ -1033,7 +1033,7 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
             body = """
                 {
                     repository(owner: "%s", name: "%s") {
-                        content: object(expression: "%s:README.md") {
+                        content: object(expression: "%s:readme.md") {
                             ... on Blob {
                                 text
                                 byteSize
