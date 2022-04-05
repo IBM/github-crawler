@@ -1025,7 +1025,7 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
     repo_name_parts = repo_name.split("/")
     response = {}
     tags = ["HEAD"] if releases is None else [r['tag'] for r in releases]
-    defaultBranchRef = "master"
+    defaultBranchRef = "main"
     # print(tags)
     try:
         content = {}
