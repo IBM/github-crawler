@@ -1034,7 +1034,7 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
             body = """
                 {
                     repository(owner: "%s", name: "%s") {
-                        content: object(expression: "%s:README.md") {
+                        content: object(expression: "%s:readme.md") {
                             ... on Blob {
                                 text
                                 byteSize
