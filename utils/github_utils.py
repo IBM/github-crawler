@@ -1027,13 +1027,14 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
     tags = ["HEAD"] if releases is None else [r['tag'] for r in releases]
     defaultBranchRef = "main"
     # print(tags)
+    # todo make it work for case sensitive filename README and readme
     try:
         content = {}
         for tag in tags:
             body = """
                 {
                     repository(owner: "%s", name: "%s") {
-                        content: object(expression: "%s:readme.md") {
+                        content: object(expression: "%s:README.md") {
                             ... on Blob {
                                 text
                                 byteSize
@@ -1046,7 +1047,10 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
                 }""" % (repo_name_parts[0], repo_name_parts[1], tag)
             res = graphql_api(body)
             r = res["data"]["repository"]
-            content[tag] = {'text': r['content']['text'], 'byteSize': r['content']['byteSize']}
+            if r['content']:
+                content[tag] = {'text': r['content']['text'], 'byteSize': r['content']['byteSize']}
+            else:
+                content[tag] = {'text': None, 'byteSize': 0}
             defaultBranchRef = r['defaultBranchRef']['name']
 
         response['content'] = content
