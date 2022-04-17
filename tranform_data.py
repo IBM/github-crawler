@@ -21,7 +21,7 @@ def main(args):
     print("Total Releases for all repos: ", len(releases))
 
     i = 0
-    for i, repo in repos:
+    for repo in repos:
         try:
             repo_releases = [r for r in releases if r['repo'] == repo['_id']]
             print("\n ", i, ". ", repo["_id"], " :: ",  len(repo_releases))
