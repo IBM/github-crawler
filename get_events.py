@@ -27,7 +27,7 @@ def main(args):
     try:
         limit = int(args[1])
     except:
-        limit = 1000
+        limit = 10000
 
     try:
         skip = int(args[2])
@@ -157,16 +157,17 @@ def get_watchers_events(limit, skip, sort, cutoff):
 def get_README_history(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        "readme_events": {"$exists": False},
+        # "readme_events": {"$exists": False},
+        "releases.0": {"$exists": True},
     }, ["_id", "releases"], limit=limit, skip=skip, raw_result=True)["docs"]]
-    repos = [r for r in repos if r["_id"] in valid_repos]
 
     print("repos", len(repos))
+    i = 1
     for repo in repos:
-        print("\n", repo)
+        print("\n",  i, ". ", repo["_id"])
+        i += 1
         repo_id = repo["_id"]
         releases = repo['releases']
-        # print("# of releases", len(releases))
         try:
             readme = gh.get_README_history(repo_id, releases, cutoff)
             # print(readme)
@@ -176,8 +177,10 @@ def get_README_history(limit, skip, sort, cutoff):
                 "readme_events_id": repo_id + "/readme",
                 "readme_events": len(readme)})
         except Exception as e:
+            print("---------------->", repo["_id"])
             print(str(e))
             pass
+
 
 def get_stars_events(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
