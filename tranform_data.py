@@ -20,9 +20,11 @@ def main(args):
                  "stars": 0, "watchers":0, "forks":0, "commits": 0, "issues":0} for r in repos for re in r["releases"] ][::-1]
     print("Total Releases for all repos: ", len(releases))
 
-    for repo in repos:
+    i = 0
+    for i, repo in repos:
         try:
             repo_releases = [r for r in releases if r['repo'] == repo['_id']]
+            print("\n ", i, ". ", repo["_id"], " :: ",  len(repo_releases))
             _, s_events, s_initial_count = getStars(repo)
             _, w_events, w_initial_count = getWatchers(repo)
             _, f_events, f_initial_count = getForks(repo)
@@ -44,6 +46,7 @@ def main(args):
             save_doc(repo["_id"], {
                 "release_events_id": repo["_id"] + "/release",
                 "release_events": len(repo_releases)})
+            i += 1
 
         except Exception as e:
             print(str(e))
