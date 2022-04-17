@@ -13,99 +13,116 @@ def main(args):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
         "releases.0": {"$exists": True},
-        "release_events": {"$exists": False},
-    }, fields, limit=10000, raw_result=True)["docs"]]
-
-    filterList = ["ARM-software/ComputeLibrary", "Accenture/AmpliGraph"]
-    repos = [r for r in repos if r["_id"] not in filterList]
+        # "release_events": {"$exists": False},
+    }, fields, limit=100000, raw_result=True)["docs"]]
 
     releases = [{"repo": r["_id"], "release_tag": re["tag"], "release_date": re["published_at"], "downloads": re["download"],
                  "stars": 0, "watchers":0, "forks":0, "commits": 0, "issues":0} for r in repos for re in r["releases"] ][::-1]
-    print_json(len(releases))
-    # print(releases)
+    print("Total Releases for all repos: ", len(releases))
 
     for repo in repos:
         try:
-            total_stars, stars_post_cutoff, stars_pre_cutoff = getStars(repo)
-            total_watchers, watchers_post_cutoff, watchers_pre_cutoff = getWatchers(repo)
-            total_forks, forks_post_cutoff, forks_pre_cutoff = getForks(repo)
-            total_commits, commits_post_cutoff, commits_pre_cutoff = getCommits(repo)
-            total_issues, issues_post_cutoff, issues_pre_cutoff, issues = getIssues(repo)
-            readme_dict = getReadmeContent(repo)
-            contributor_statistics = repo["contributor_statistics"]
             repo_releases = [r for r in releases if r['repo'] == repo['_id']]
+            _, s_events, s_initial_count = getStars(repo)
+            _, w_events, w_initial_count = getWatchers(repo)
+            _, f_events, f_initial_count = getForks(repo)
+            _, c_events, c_initial_count = getCommits(repo)
+            _, i_events, i_initial_count, closed_issues = getIssues(repo)
+
+            updateReleases(repo_releases, "stars", s_events, s_initial_count)
+            updateReleases(repo_releases, "watchers", w_events, w_initial_count)
+            updateReleases(repo_releases, "forks", f_events, f_initial_count)
+            updateReleases(repo_releases, "commits", c_events, c_initial_count)
+            updateReleases(repo_releases, "issues", i_events, i_initial_count)
+            updateReleases(repo_releases, "closedIssues", closed_issues, 0)  # todo get initial closedIssues count
+
+            addReadme(repo_releases, repo)
+            # addContributorsInRelease(repo_releases, repo)
+
             # print(repo_releases)
-            # Tested for issues, stars, forks
-            for i in range(len(repo_releases)):
-                # print("Repo:%s \t Tag: %s" % (repo['_id'],  repo_releases[i]['release_tag']))
-                r = repo_releases[i]
-                curr_release = r["release_date"]
-                if curr_release < "2020-01-01":
-                    continue
-                next_release = str(date.today()) if i+1 == len(repo_releases) else repo_releases[i+1]["release_date"]
-                prev_release = "2018-01-01" if i == 0 else repo_releases[i-1]["release_date"]
-                # print(i, prev_release, curr_release, next_release)
-
-                updateRelease(curr_release,  next_release, r, stars_post_cutoff, stars_pre_cutoff,  "stars")
-                updateRelease(curr_release,  next_release, r, watchers_post_cutoff, watchers_pre_cutoff,  "watchers")
-                updateRelease(curr_release,  next_release, r, forks_post_cutoff, forks_pre_cutoff,  "forks")
-
-                updateRelease(prev_release, curr_release, r, commits_post_cutoff, commits_pre_cutoff,  "commits")
-                updateRelease(prev_release, curr_release, r, issues_post_cutoff, issues_pre_cutoff,  "issues", additional_dict=issues)
-                r['readme'] = readme_dict[r['release_tag']]['text']
-                r['readme_size'] = readme_dict[r['release_tag']]['byteSize']
-
-                addContributorsInRelease(r, contributor_statistics)
-            print_json(repo_releases)
             save_doc(repo["_id"] + "/release", {"type": "release", "releases": repo_releases})
             save_doc(repo["_id"], {
                 "release_events_id": repo["_id"] + "/release",
                 "release_events": len(repo_releases)})
+
         except Exception as e:
             print(str(e))
             pass
 
 
-def addContributorsInRelease(release, contributor_statistics):
-    a = 0
-    d = 0
-    c_total = 0
-    contributors = []
-    for c in contributor_statistics:
-        author = c['author_id']
-        total = c['total']
-        for w in c['weeks']:
-            if w['w'] < release['release_date']:
-                a += w["a"]
-                d += w["d"]
-                c_total += w["c"]
-                contributors.append(author)
-    release["added"] = a
-    release["deleted"] = d
-    release["changed"] = c_total #todo confirm the field
-    release["contributors"] = len(set(contributors)) #todo use contributors login name
+def addReadme(releases, repo):
+    readme_dict = getReadmeContent(repo)
+    for r in releases:
+        r['readme'] = readme_dict[r['release_tag']]['text']
+        r['readme_size'] = readme_dict[r['release_tag']]['byteSize']
 
 
-def updateRelease(R1, R2, release, events, initial_count, field, additional_dict=None):
-    count = 0
+def addContributorsInRelease(releases, repo):
+    contributor_statistics = repo["contributor_statistics"]
+    for r in releases:
+        a = 0
+        d = 0
+        c_total = 0
+        contributors = []
+        for c in contributor_statistics:
+            author = c['author_id']
+            total = c['total']
+            for w in c['weeks']:
+                if w['w'] < r['release_date']:
+                    a += w["a"]
+                    d += w["d"]
+                    c_total += w["c"]
+                    contributors.append(author)
+        r["added"] = a
+        r["deleted"] = d
+        r["changed"] = c_total #todo confirm the field
+        r["contributors"] = len(set(contributors)) #todo use contributors login name
 
-    # if there is additional keys like "closed" in additional_dict, we sum these fields as well in release
-    closedCount = 0
-    if additional_dict:
-        events = list(i['createdAt'] for i in additional_dict)
+
+# Demostration of algorithm: makes a range query on releases,
+# i.e if an event (e1) falls in between R1 and R2 , then it belongs to R1 release
+
+# Example 1:
+#               *------+---+---*----+---------*--+--
+# Release:      R1             R2             R3
+# Events:            e1 e2       e3            e4
+
+# Example 2:
+#               *--------------*--------------*-----+
+# Release:      R1             R2             R3
+# Events:                                           e5
+
+# Solution:
+# Example 1:  R1={e1,e2}, R2={e3},  R3={e4}
+# Example 2:  R1={}, R2={},  R3={e5}
+def updateReleases(releases, field, events, initial_count, agg=True):
     i = 0
+    c = releases[i]['release_date']
+    n = str(date.today()) if i+1 == len(releases) else releases[i+1]['release_date']
+    count = 0
     for e in events:
-        if R1 < e < R2:
-            count += 1
-            if additional_dict and 'closed' in additional_dict[i] and additional_dict[i]['closed']:
-                closedCount += 1
-        if e > R2:
-            break
-        i += 1
+        if e < c:
+            initial_count += 1
+            continue
+        while e > n:
+            c = n
+            n = str(date.today()) if i+2 == len(releases) else releases[i+2]['release_date']
+            releases[i]['total_'+field] = initial_count + count if agg else count
+            # releases[i]["initial_"+field] = initial_count
+            releases[i][field] = count
+            i += 1
+            initial_count = initial_count + count
+            count = 0
 
-    release[field] = count
-    if additional_dict:
-        release[field + 'Closed'] = closedCount
+        if c <= e < n:
+            count += 1
+    while i < len(releases):
+        releases[i]["total_"+field] = initial_count + count if agg else count
+        # releases[i]["initial_"+field] = initial_count
+        releases[i][field] = count
+        i += 1
+        initial_count = initial_count + count
+        count = 0
 
 
 def getReadmeContent(repo):
@@ -144,10 +161,14 @@ def getCommits(repo):
 def getIssues(repo):
     issues = db[repo["_id"] + "/issues"]["events"]
     issues = sorted(issues, key=lambda i: i['createdAt'])
-    issues_post_cutoff = list(i['createdAt'] for i in issues)[::-1]
+    issues_post_cutoff = list(i['createdAt'] for i in issues)
     total_issues = repo["issues_count"]
     issues_pre_cutoff = total_issues - len(issues_post_cutoff)
-    return total_issues, issues_post_cutoff, issues_pre_cutoff, issues
+
+    closed_issues = [i['closedAt'] for i in issues]
+    closed_issues = sorted(list(filter(None, closed_issues)))
+
+    return total_issues, issues_post_cutoff, issues_pre_cutoff, closed_issues
 
 
 if __name__ == "__main__":
