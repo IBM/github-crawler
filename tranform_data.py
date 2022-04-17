@@ -25,6 +25,7 @@ def main(args):
         try:
             repo_releases = [r for r in releases if r['repo'] == repo['_id']]
             print("\n ", i, ". ", repo["_id"], " :: ",  len(repo_releases))
+            i += 1
             _, s_events, s_initial_count = getStars(repo)
             _, w_events, w_initial_count = getWatchers(repo)
             _, f_events, f_initial_count = getForks(repo)
@@ -46,7 +47,6 @@ def main(args):
             save_doc(repo["_id"], {
                 "release_events_id": repo["_id"] + "/release",
                 "release_events": len(repo_releases)})
-            i += 1
 
         except Exception as e:
             print(str(e))
@@ -148,10 +148,13 @@ def getWatchers(repo):
 
 
 def getForks(repo):
-    forks_post_cutoff = list(db[repo["_id"] + "/forks"]["forks"].values())[::-1]
     total_forks = repo["forks_count"]
-    forks_pre_cutoff = total_forks - len(forks_post_cutoff)
-    return total_forks, forks_post_cutoff, forks_pre_cutoff
+    if total_forks > 0:
+        forks_post_cutoff = list(db[repo["_id"] + "/forks"]["forks"].values())[::-1]
+        forks_pre_cutoff = total_forks - len(forks_post_cutoff)
+        return total_forks, forks_post_cutoff, forks_pre_cutoff
+    else:
+        return 0, [], 0
 
 
 def getCommits(repo):
