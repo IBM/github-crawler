@@ -1127,3 +1127,18 @@ def get_README_history(repo_name, releases,  cut_date="2000"):
     except Exception as e:
         print(repo_name, "error \n", str(e))
         raise e
+
+def repo_search_count(topic, stars, size):
+    body = """
+    {
+        search(query: "topic:%s stars:>=%d size:%s archived:false mirror:false", type: REPOSITORY) {
+            repositoryCount
+        }
+    }
+    """ % (topic, stars, size)
+    res = graphql_api(body)
+    if "errors" in res:
+        print(json.dumps(res["errors"], indent=2))
+        return None
+    else:
+        return res["data"]["search"]["repositoryCount"]
