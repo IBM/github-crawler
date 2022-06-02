@@ -27,15 +27,15 @@ def main(args):
             print("\n ", i, ". ", repo["_id"], " :: ",  len(repo_releases))
             i += 1
             _, s_events, s_initial_count = getStars(repo)
-            _, w_events, w_initial_count = getWatchers(repo)
+            # _, w_events, w_initial_count = getWatchers(repo)
             _, f_events, f_initial_count = getForks(repo)
             _, c_events, c_initial_count = getCommits(repo)
             _, i_events, i_initial_count, closed_issues = getIssues(repo)
 
             updateReleases(repo_releases, "stars", s_events, s_initial_count)
-            updateReleases(repo_releases, "watchers", w_events, w_initial_count)
+            # updateReleases(repo_releases, "watchers", w_events, w_initial_count)
             updateReleases(repo_releases, "forks", f_events, f_initial_count)
-            updateReleases(repo_releases, "commits", c_events, c_initial_count)
+            addCommitsAndContribInRelease(repo_releases, c_events, c_initial_count) # Adds contributors along with commit counts.
             updateReleases(repo_releases, "issues", i_events, i_initial_count)
             updateReleases(repo_releases, "closedIssues", closed_issues, 0)  # todo get initial closedIssues count
 
@@ -128,6 +128,43 @@ def updateReleases(releases, field, events, initial_count, agg=True):
         count = 0
 
 
+def addCommitsAndContribInRelease(releases, events, initial_count, agg=True):
+    i = 0
+    c = releases[i]['release_date']
+    n = str(date.today()) if i+1 == len(releases) else releases[i+1]['release_date']
+    count = 0
+    contributors = []
+    for e in events:
+        if e['date'] < c:
+            initial_count += 1
+            contributors.append(e['committer'])
+            continue
+        while e['date'] > n:
+            c = n
+            n = str(date.today()) if i+2 == len(releases) else releases[i+2]['release_date']
+            releases[i]['total_commits'] = initial_count + count if agg else count
+            releases[i]['contributors'] = list(set(contributors))
+
+            releases[i]['commits'] = count
+            i += 1
+            initial_count = initial_count + count
+            count = 0
+            contributors = []
+
+        if c <= e['date'] < n:
+            count += 1
+            contributors.append(e['committer'])
+    while i < len(releases):
+        releases[i]["total_commits"] = initial_count + count if agg else count
+        releases[i]['contributors'] = list(set(contributors))
+
+        releases[i]['commits'] = count
+        i += 1
+        initial_count = initial_count + count
+        count = 0
+        contributors = []
+
+
 def getReadmeContent(repo):
     read_me_content = db[repo["_id"] + "/readme"]["readme"]['content']
     return read_me_content
@@ -158,7 +195,9 @@ def getForks(repo):
 
 
 def getCommits(repo):
-    commits_post_cutoff = list(c['date'] for c in db[repo["_id"] + "/commits"]["events"])[::-1]
+    commits_post_cutoff = db[repo["_id"] + "/commits"]["events"]
+    commits_post_cutoff = sorted(commits_post_cutoff, key=lambda i: i['date'])
+
     total_commits = repo["commits_count"]
     commits_pre_cutoff = total_commits - len(commits_post_cutoff)
     return total_commits, commits_post_cutoff, commits_pre_cutoff
