@@ -9,9 +9,19 @@ from cloudant.adapters import Replay429Adapter
 from dotenv import load_dotenv
 load_dotenv()
 
-cloudant_client = Cloudant.iam(None, os.getenv("CLOUDANT_API_KEY"), connect=True,
-    url=os.getenv("CLOUDANT_URL"),
-    adapter=Replay429Adapter(retries=10, initialBackoff=0.01))
+if "CLOUDANT_API_KEY" in os.environ:
+    cloudant_client = Cloudant.iam(None, os.getenv("CLOUDANT_API_KEY"), 
+        connect=True,
+        url=os.getenv("CLOUDANT_URL"),
+        adapter=Replay429Adapter(retries=10, initialBackoff=0.01))
+else:
+    cloudant_client = Cloudant(os.getenv("CLOUDANT_USERNAME"), os.getenv("CLOUDANT_PASSWORD"), 
+        url=os.getenv("CLOUDANT_URL"),
+        connect=True,
+        auto_renew=True,
+        adapter=Replay429Adapter(retries=10, initialBackoff=0.01))
+
+
 cloudant_client.session()
 
 db_name = os.getenv("CLOUDANT_DB")

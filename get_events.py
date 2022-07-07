@@ -143,7 +143,7 @@ def get_watchers_events(limit, skip, sort, cutoff):
 def get_README_history(limit, skip, sort, cutoff):
     repos = [r for r in db.get_query_result({
         "type": "Repo",
-        # "readme_events": {"$exists": False},
+        "readme_events": {"$exists": False},
         "releases.0": {"$exists": True},
     }, ["_id", "releases"], limit=limit, skip=skip, raw_result=True)["docs"]]
 
