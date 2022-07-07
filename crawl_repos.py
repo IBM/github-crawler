@@ -46,7 +46,7 @@ if __name__ == "__main__":
                     page_size=100000,
                     skip=0)
     repos = [ r['id'] for r in results ]
-    print(repos)
+    # print(repos)
 
     try:
         stars = int(sys.argv[2])
