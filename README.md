@@ -4,15 +4,33 @@ Extract GitHub repositories metadata and README content.
 
 STEPS:
 1. environment SETUP and package installation
-    ```
-    cp .env.example .env
+
+### Virtual env
+
+    ```sh
     python3 -m venv env
     source env/bin/activate
     pip install --upgrade pip
     pip install -r requirements.txt
+    # when finish using
+    deactivate 
+    ```
+
+### Conda
+
+    ```sh
+    conda env create -f conda.yaml
+    conda activate crawler
+    # when finish using
+    conda deactivate
     ```
 
 2. Update the `.env` file with the correct params
+
+    ```sh
+    cp .env.example .env
+    code .env
+    ```
 
 3. Run the following scripts:
 
