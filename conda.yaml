@@ -1,0 +1,8 @@
+name: crawler
+channels:
+  - https://conda.anaconda.org/pyg
+dependencies:
+  - python==3.9
+  - pip>=22
+  - pip:
+    - -r requirements.txt
